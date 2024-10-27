@@ -41,7 +41,7 @@ As an example, after producing the three missing files, you should be able to la
 ./launch_scripts/base.sh
 ```
 
-*NOTE: you should upload with your code also you launch scripts as they are fundamental to run your code and reproduce your results.*
+*NOTE: you should upload with your code also the launch scripts as they are fundamental to reproduce your results.*
 
 In the following, you can find a brief description of the relevant command line arguments when launching the experiments. They should suffice. However, if needed, you can add additional arguments by editing the `args.py` file.
 
