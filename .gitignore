@@ -2,5 +2,10 @@ env/
 checkpoints/*
 data/*
 __pycache__/
-.idea/
+
 venv/
+
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
