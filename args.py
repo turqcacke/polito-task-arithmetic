@@ -4,7 +4,7 @@ import os
 import torch
 
 
-def parse_arguments():
+def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data-location",
