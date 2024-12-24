@@ -2,6 +2,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/cuda,linux,macos,python,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=cuda,linux,macos,python,windows
 
+# Input & output data
+checkpoints/*
+data/*
+
 ### CUDA ###
 *.i
 *.ii
@@ -32,7 +36,8 @@
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
