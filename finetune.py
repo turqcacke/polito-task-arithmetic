@@ -60,12 +60,12 @@ def finetune_model(dataset_name, save_path, epochs = 0, lr=1e-4, batch_size=32):
 
 if __name__ == "__main__":
     datasets = {
-        # "DTD": 76,
-        # "EuroSAT": 12,
-        # "GTSRB": 11,
+        "DTD": 76,
+        "EuroSAT": 12,
+        "GTSRB": 11,
         "MNIST": 5,
-        # "RESISC45": 15,
-        # "SVHN": 4
+        "RESISC45": 15,
+        "SVHN": 4
     }
     save_directory = "./checkpoints/"
 
