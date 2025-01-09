@@ -7,8 +7,15 @@ from datasets.registry import get_dataset
 from datasets.common import maybe_dictionarize
 from modeling import ImageClassifier, ImageEncoder
 from heads import get_classification_head
-from utils import train_diag_fim_logtr
 from tqdm import tqdm
+import os
+
+def save_pretrained_encoder(encoder, save_dir):
+    """Save the pre-trained encoder before training starts."""
+    os.makedirs(save_dir, exist_ok=True)
+    pretrained_path = os.path.join(save_dir, "pretrained_encoder.pt")
+    encoder.save(pretrained_path)
+    print(f"Pre-trained encoder saved at: {pretrained_path}")
 
 def finetune_model(dataset_name, save_path, epochs = 0, lr=1e-4, batch_size=32):
     # Parse arguments and initialize device
@@ -17,6 +24,10 @@ def finetune_model(dataset_name, save_path, epochs = 0, lr=1e-4, batch_size=32):
 
     # Initialize pre-trained encoder and dataset-specific head
     encoder = ImageEncoder(args)
+
+    # Save the pre-trained encoder before fine-tuning
+    save_pretrained_encoder(encoder, "./checkpoints/")
+
     head = get_classification_head(args, dataset_name + "Val")
     model = ImageClassifier(encoder, head).to(device)
     model.freeze_head()  # Freeze classification head
