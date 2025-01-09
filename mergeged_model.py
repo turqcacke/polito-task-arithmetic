@@ -27,9 +27,7 @@ class MergedModelBuilder:
             encoder = NonLinearTaskVector(pretrained, checkpoint.encoder)
             self._tasks[dataset] = encoder
 
-    def _get_checkpoint_path(
-        self, name_filter: Callable[[str], bool]
-    ) -> Dict[str, CheckpointPath]:
+    def _get_checkpoint_path(self) -> Dict[str, CheckpointPath]:
         if not os.path.exists(self._checkpoints_dir):
             raise FileNotFoundError()
         base_dir = Path(self._checkpoints_dir)
@@ -43,8 +41,6 @@ class MergedModelBuilder:
         )
         checkpoints: Dict[str, CheckpointPath] = {}
         for file in os.listdir(str(base_dir)):
-            if not name_filter(file):
-                continue
             if file == self.MODEL_NAME:
                 continue
             file_path = str(base_dir / file)
