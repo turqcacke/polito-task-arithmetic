@@ -24,7 +24,7 @@ class AccuracyStats:
         self._program_args = args
 
     @lru_cache
-    def generate(self, path: str, encoding: str = "utf-8") -> list[dict]:
+    def generate(self, path: str, encoding: str = "utf-8") -> list[TaskAccuracyStat]:
         stats = []
         for dataset in self._model_builder.checkpoints:
             head = get_classification_head(self._program_args, dataset + "Val")
