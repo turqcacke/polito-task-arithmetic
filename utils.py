@@ -1,8 +1,8 @@
 import os
 import pickle
-
 import numpy as np
 import torch
+from typing import Tuple
 from tqdm.auto import tqdm
 from datasets.common import get_dataloader, maybe_dictionarize
 from datasets.registry import get_dataset
@@ -21,7 +21,7 @@ def torch_load(save_path, device=None):
     return model
 
 
-class DotDict(dict): 
+class DotDict(dict):
     """dot.notation access to dictionary attributes"""
 
     __getattr__ = dict.get
@@ -29,28 +29,23 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def train_diag_fim_logtr(
-            args,
-            model,
-            dataset_name: str,
-            samples_nr: int = 2000):
-    
+def train_diag_fim_logtr(args, model, dataset_name: str, samples_nr: int = 2000):
+
     model.cuda()
-    if not dataset_name.endswith('Val'):
-        dataset_name += 'Val'
+    if not dataset_name.endswith("Val"):
+        dataset_name += "Val"
 
     dataset = get_dataset(
         dataset_name,
         model.val_preprocess,
         location=args.data_location,
         batch_size=args.batch_size,
-        num_workers=0
+        num_workers=0,
     )
     data_loader = torch.utils.data.DataLoader(
-        dataset.train_dataset, 
-        batch_size=args.batch_size, 
-        num_workers=0, shuffle=False)
-    
+        dataset.train_dataset, batch_size=args.batch_size, num_workers=0, shuffle=False
+    )
+
     fim = {}
     for name, param in model.named_parameters():
         if param.requires_grad:
@@ -67,11 +62,16 @@ def train_diag_fim_logtr(
             data_iterator = iter(data_loader)
             data = next(data_loader)
         data = maybe_dictionarize(data)
-        x, y = data['images'], data['labels']
+        x, y = data["images"], data["labels"]
         x, y = x.cuda(), y.cuda()
 
         logits = model(x)
-        outdx = torch.distributions.Categorical(logits=logits).sample().unsqueeze(1).detach()
+        outdx = (
+            torch.distributions.Categorical(logits=logits)
+            .sample()
+            .unsqueeze(1)
+            .detach()
+        )
         samples = logits.gather(1, outdx)
 
         idx, batch_size = 0, x.size(0)
@@ -80,12 +80,17 @@ def train_diag_fim_logtr(
             model.zero_grad()
             torch.autograd.backward(samples[idx], retain_graph=True)
             for name, param in model.named_parameters():
-                if param.requires_grad and hasattr(param, 'grad') and param.grad is not None:
-                    fim[name] += (param.grad * param.grad)
+                if (
+                    param.requires_grad
+                    and hasattr(param, "grad")
+                    and param.grad is not None
+                ):
+                    fim[name] += param.grad * param.grad
                     fim[name].detach_()
             seen_nr += 1
             progress_bar.update(1)
-            if seen_nr >= samples_nr: break
+            if seen_nr >= samples_nr:
+                break
 
     fim_trace = 0.0
     for name, grad2 in fim.items():

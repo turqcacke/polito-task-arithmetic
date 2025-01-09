@@ -1,17 +1,15 @@
 import os
-
 import open_clip
 import torch
+from args import ArgsProto
 from tqdm.auto import tqdm
-
 from datasets.registry import get_dataset
 from datasets.templates import get_templates
 from modeling import ClassificationHead, ImageEncoder
 
 
-def build_classification_head(model, dataset_name, template, data_location, device):
+def build_classification_head(model:torch.nn.Module, dataset_name: str, data_location: str, device: str):
     template = get_templates(dataset_name)
-
     logit_scale = model.logit_scale
     dataset = get_dataset(dataset_name, None, location=data_location)
     model.eval()
@@ -46,7 +44,7 @@ def build_classification_head(model, dataset_name, template, data_location, devi
     return classification_head
 
 
-def get_classification_head(args, dataset):
+def get_classification_head(args: ArgsProto, dataset: str):
     if not dataset.endswith("Val"):
         # We want to load the head for the validation set always to be consistent with the one generated at training time.
         dataset += "Val"
@@ -59,9 +57,8 @@ def get_classification_head(args, dataset):
         f"Did not find classification head for {args.model} on {dataset} at {filename}, building one from scratch."  # noqa: E501
     )
     model = ImageEncoder(args, keep_lang=True).model
-    template = get_templates(dataset)
     classification_head = build_classification_head(
-        model, dataset, template, args.data_location, args.device
+        model, dataset, args.data_location, args.device
     )
     os.makedirs(args.save, exist_ok=True)
     classification_head.save(filename)
