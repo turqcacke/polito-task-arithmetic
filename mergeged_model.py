@@ -71,7 +71,7 @@ class MergedModelBuilder:
         add_vector = None
 
         if not self._tasks:
-            raise AssertionError("Not task defined with provided filter.")
+            raise AssertionError("No task defined with provided filter.")
 
         for task in self._tasks.values():
             if not add_vector:
