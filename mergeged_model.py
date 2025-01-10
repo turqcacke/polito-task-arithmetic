@@ -1,39 +1,43 @@
+import consts
 import os
-import torch.nn.modules
-from args import ArgsProto
-from modeling import ImageEncoder, ImageClassifier, ClassificationHead
+from dataclasses import dataclass
+from modeling import ImageClassifier, ClassificationHead
 from task_vectors import NonLinearTaskVector
-from typing import NamedTuple, Callable, Dict, Optional, Any
+from typing import Callable, Dict, Optional, Sequence
+from tqdm import tqdm
 from pathlib import Path
 
 
-class CheckpointPath(NamedTuple):
-    head: str | None
-    encoder: str | None
+@dataclass
+class CheckpointPath:
+    head: str | None = None
+    encoder: str | None = None
 
 
 class MergedModelBuilder:
-    MODEL_NAME = "MERGED_model.pt"
-
     def __init__(self, checkpoints_dir: str):
         self._tasks: Dict[str, NonLinearTaskVector] = {}
         self._checkpoints_dir = checkpoints_dir
         self.checkpoints = self._get_checkpoint_path()
 
-    def _load_pretrained_models(self, pretrained: str, filter_: Callable[[str], bool]):
-        for dataset, checkpoint in self.checkpoints.items():
+    def _load_tasks(self, pretrained: str, filter_: Callable[[str], bool]):
+        for dataset, checkpoint in tqdm(
+            self.checkpoints.items(), desc="Load task vector"
+        ):
             if not filter_(dataset):
                 continue
             encoder = NonLinearTaskVector(pretrained, checkpoint.encoder)
             self._tasks[dataset] = encoder
 
-    def _get_checkpoint_path(self) -> Dict[str, CheckpointPath]:
+    def _get_checkpoint_path(
+        self, exclude: Sequence[str] = consts.EXCLUDED_CHECKPOINTS
+    ) -> Dict[str, CheckpointPath]:
         if not os.path.exists(self._checkpoints_dir):
             raise FileNotFoundError()
         base_dir = Path(self._checkpoints_dir)
-        head_prefix = "head"
+        head_prefix = "head_"
         head_suffix = "Val.pt"
-        encoder_suffix = "finetuned.pt"
+        encoder_suffix = "_finetuned.pt"
         extract_dataset_name: Callable[[str], str] = lambda f: (
             f.removeprefix(head_prefix).removesuffix(head_suffix)
             if f.startswith(head_prefix)
@@ -41,15 +45,16 @@ class MergedModelBuilder:
         )
         checkpoints: Dict[str, CheckpointPath] = {}
         for file in os.listdir(str(base_dir)):
-            if file == self.MODEL_NAME:
+            if file in exclude:
                 continue
             file_path = str(base_dir / file)
             dataset = extract_dataset_name(file)
-            checkpoint_path = checkpoints.get(dataset, CheckpointPath(None, None))
+            checkpoint_path = checkpoints.get(dataset, CheckpointPath())
             if file.startswith(head_prefix):
                 checkpoint_path.head = file_path
                 continue
             checkpoint_path.encoder = file_path
+            checkpoints[dataset] = checkpoint_path
         return checkpoints
 
     def build(
@@ -59,7 +64,7 @@ class MergedModelBuilder:
         alpha: float = 1.0,
         dataset: Optional[str] = None,
     ) -> ImageClassifier:
-        self._load_pretrained_models(
+        self._load_tasks(
             pretrained_model,
             lambda name: name == dataset if dataset else lambda _: True,
         )

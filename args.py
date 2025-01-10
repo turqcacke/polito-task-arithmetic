@@ -4,13 +4,9 @@ import consts
 from typing import Protocol
 import torch
 from typing import Optional, List, Literal, Protocol
-from pathlib import Path
-
-_BASE_DIR = Path(__file__).resolve().parent
 
 
 class ArgsProto(Protocol):
-    pretrained_model: str
     data_location: str
     eval_datasets: Optional[List[str]]
     train_dataset: Optional[List[str]]
@@ -39,11 +35,6 @@ class ArgsProto(Protocol):
 
 def parse_arguments() -> ArgsProto:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--pretrained-model",
-        type=str,
-        default=str(_BASE_DIR / "pretrained" / consts.PRETRAINED_MODEL_NAME),
-    )
     parser.add_argument(
         "--data-location",
         type=str,

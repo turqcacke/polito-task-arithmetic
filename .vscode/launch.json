@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Eval Single Task",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/eval_single_task.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--data-location=./data",
+                "--save=./checkpoints"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
