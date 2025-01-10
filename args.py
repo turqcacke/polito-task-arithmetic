@@ -1,4 +1,5 @@
 import argparse
+import consts
 import os
 from typing import Protocol
 import torch
@@ -7,6 +8,7 @@ from typing import Optional, List, Literal, Protocol
 
 class ArgsProto(Protocol):
     data_location: str
+    st_model: Optional[consts.SINGLE_TASK_MODEL_TYPES]
     eval_datasets: Optional[List[str]]
     train_dataset: Optional[List[str]]
     exp_name: Optional[str]
@@ -34,6 +36,12 @@ class ArgsProto(Protocol):
 
 def parse_arguments() -> ArgsProto:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--st-model",
+        choices=["pretrained", "finetuned", "merged"],
+        default="finetuned",
+        help="Which model is used for generating eval_single_task `json` report",
+    )
     parser.add_argument(
         "--data-location",
         type=str,

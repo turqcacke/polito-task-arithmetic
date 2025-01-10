@@ -4,6 +4,7 @@ import utils
 from typing import Mapping, Optional, Any, Union, List, NamedTuple
 from args import ArgsProto
 
+
 class StateDictMising(NamedTuple):
     missing_keys: List[Any]
     unexpected_keys: List[Any]
@@ -40,11 +41,17 @@ class ImageEncoder(torch.nn.Module):
     @classmethod
     def load(cls, args: ArgsProto, filename: str) -> StateDictMising:
         print(f"Loading image encoder from {filename}")
-        state_dict: Mapping[str, Any] = torch.load(filename, map_location="cpu")
-        return cls.load_from_state_dict(args, state_dict)
+        load_model: Mapping[str, Any] | ImageEncoder = torch.load(
+            filename, map_location="cpu", weights_only=False
+        )
+        if isinstance(load_model, ImageEncoder):
+            return load_model
+        return cls.load_from_state_dict(args, load_model)
 
     @classmethod
-    def load_from_state_dict(cls, args: ArgsProto, state_dict: Mapping[str, Any]) -> StateDictMising:
+    def load_from_state_dict(
+        cls, args: ArgsProto, state_dict: Mapping[str, Any]
+    ) -> StateDictMising:
         model, pretrained = cls.extract_model_args(args)
         (
             cls.model,
@@ -54,7 +61,7 @@ class ImageEncoder(torch.nn.Module):
             model, pretrained=pretrained, cache_dir=args.openclip_cachedir
         )
         return cls.model.load_state_dict(state_dict)
-    
+
     @classmethod
     def extract_model_args(cls, args: ArgsProto) -> tuple[str, Optional[str]]:
         print(f"Loading {args.model} pre-trained weights.")
@@ -67,6 +74,7 @@ class ImageEncoder(torch.nn.Module):
             name = args.model
             pretrained = "openai"
         return name, pretrained
+
 
 class ClassificationHead(torch.nn.Linear):
     def __init__(self, normalize, weights, biases=None):
@@ -99,7 +107,9 @@ class ClassificationHead(torch.nn.Linear):
 
 
 class ImageClassifier(torch.nn.Module):
-    def __init__(self, image_encoder: ImageEncoder, classification_head: ClassificationHead):
+    def __init__(
+        self, image_encoder: ImageEncoder, classification_head: ClassificationHead
+    ):
         super().__init__()
         self.image_encoder = image_encoder
         self.classification_head = classification_head
