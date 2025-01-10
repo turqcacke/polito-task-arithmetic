@@ -16,18 +16,21 @@ class CheckpointPath:
 
 class MergedModelBuilder:
     def __init__(self, checkpoints_dir: str):
-        self._tasks: Dict[str, NonLinearTaskVector] = {}
         self._checkpoints_dir = checkpoints_dir
         self.checkpoints = self._get_checkpoint_path()
 
-    def _load_tasks(self, pretrained: str, filter_: Callable[[str], bool]):
+    def _load_tasks(
+        self, pretrained: str, filter_: Callable[[str], bool]
+    ) -> Dict[str, NonLinearTaskVector]:
+        tasks = {}
         for dataset, checkpoint in tqdm(
             self.checkpoints.items(), desc="Load task vector"
         ):
             if not filter_(dataset):
                 continue
             encoder = NonLinearTaskVector(pretrained, checkpoint.encoder)
-            self._tasks[dataset] = encoder
+            tasks[dataset] = encoder
+        return tasks
 
     def _get_checkpoint_path(
         self, exclude: Sequence[str] = consts.EXCLUDED_CHECKPOINTS
@@ -64,21 +67,20 @@ class MergedModelBuilder:
         alpha: float = 1.0,
         dataset: Optional[str] = None,
     ) -> ImageClassifier:
-        self._load_tasks(
+        vector_tasks = self._load_tasks(
             pretrained_model,
             lambda name: name == dataset if dataset else lambda _: True,
         )
         add_vector = None
 
-        if not self._tasks:
+        if not vector_tasks:
             raise AssertionError("No task defined with provided filter.")
 
-        for task in self._tasks.values():
+        for task in vector_tasks.values():
             if not add_vector:
                 add_vector = task
                 continue
             add_vector += task
 
         merged_ecoder = add_vector.apply_to(pretrained_model, scaling_coef=alpha)
-        self._tasks.clear()
         return ImageClassifier(merged_ecoder, head)
