@@ -19,7 +19,7 @@ class TaskAccuracyStat(TypedDict):
     """Wrapper for accuracy stats, can be used as `type`"""
 
     dataset: str
-    validation: str
+    train: str
     test: str
 
 
@@ -106,7 +106,7 @@ class AccuracyStats:
             )
             task_accuracy_stat = TaskAccuracyStat(
                 dataset=dataset,
-                validation=self._evaluate_model(
+                train=self._evaluate_model(
                     model,
                     val_loader,
                     get_loader_stats(f"(validation)[{model_type}]"),
