@@ -65,6 +65,7 @@ class AccuracyStats:
         self,
         path: str,
         model_type: consts.SINGLE_TASK_MODEL_TYPES,
+        save=False,
         encoding: str = "utf-8",
     ) -> list[TaskAccuracyStat]:
         """Generation method, used to generate `json`
@@ -74,6 +75,8 @@ class AccuracyStats:
         :type path: str
         :param model_type: Specifies which model checkpoint to use
         :type model_type: consts.SINGLE_TASK_MODEL_TYPES
+        :param save: Whether to save to a file or not, defaults to False
+        :type save: bool, optional
         :param encoding: `json` file encoding, defaults to "utf-8"
         :type encoding: str, optional
         :return: List of task based reports
@@ -116,8 +119,11 @@ class AccuracyStats:
                 ),
             )
             stats.append(task_accuracy_stat)
-        with open(path, "w", encoding=encoding) as f:
-            json.dump(stats, f, indent="\t")
+
+        if save:
+            with open(path, "w", encoding=encoding) as f:
+                json.dump(stats, f, indent="\t")
+
         return stats
 
     def _evaluate_model(
@@ -161,7 +167,7 @@ if __name__ == "__main__":
         args, str(checkpoints_dir / consts.PRETRAINED_MODEL_NAME), str(checkpoints_dir)
     )
 
-    stats = stats.generate(str(save_dir), args.st_model)
+    stats = stats.generate(str(save_dir), args.st_model, True)
 
     print("\nGenerated report for following datasets:")
     print(f"\t{str([stat['dataset'] for stat in stats])}")
