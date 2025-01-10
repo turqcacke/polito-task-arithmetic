@@ -41,9 +41,7 @@ class ImageEncoder(torch.nn.Module):
     @classmethod
     def load(cls, args: ArgsProto, filename: str) -> StateDictMising:
         print(f"Loading image encoder from {filename}")
-        load_model: Mapping[str, Any] | ImageEncoder = torch.load(
-            filename, map_location="cpu", weights_only=False
-        )
+        load_model = utils.torch_load(filename)
         if isinstance(load_model, ImageEncoder):
             return load_model
         return cls.load_from_state_dict(args, load_model)
