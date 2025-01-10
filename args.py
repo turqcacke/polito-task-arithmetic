@@ -1,6 +1,5 @@
 import argparse
 import os
-import consts
 from typing import Protocol
 import torch
 from typing import Optional, List, Literal, Protocol

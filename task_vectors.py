@@ -1,5 +1,5 @@
 import abc
-
+import pickle
 import torch
 
 
@@ -130,7 +130,9 @@ class NonLinearTaskVector(_TaskVector):
 
     def _load_checkpoint(self, checkpoint):
         """Load a checkpoint into a model."""
-        return torch.load(checkpoint, map_location="cpu")
+        return torch.load(
+            checkpoint, map_location="cpu", weights_only=False, pickle_module=pickle
+        )
 
     def _cast_to_same_type(self, other):
         return linear_to_nonlinear(other, self.vector.keys())
