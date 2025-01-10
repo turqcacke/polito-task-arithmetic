@@ -80,4 +80,5 @@ class MergedModelBuilder:
             add_vector += task
 
         merged_ecoder = add_vector.apply_to(pretrained_model, scaling_coef=alpha)
+        self._tasks.clear()
         return ImageClassifier(merged_ecoder, head)
