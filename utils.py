@@ -1,8 +1,11 @@
+from email.headerregistry import DateHeader
 import os
+from typing import Any, Tuple
 import torch
 from tqdm.auto import tqdm
 from datasets.common import maybe_dictionarize
 from datasets.registry import get_dataset
+from modeling import ImageClassifier
 
 
 def torch_save(model, save_path):
@@ -95,3 +98,32 @@ def train_diag_fim_logtr(args, model, dataset_name: str, samples_nr: int = 2000)
     fim_trace = torch.log(fim_trace / samples_nr).item()
 
     return fim_trace
+
+
+def evaluate_model(
+    model: ImageClassifier,
+    dataloader: DateHeader | Any,
+    norm_divisor: float = None,
+    loader_args: Tuple[str, int, int] = ("Undefined", 0, 0),
+    device: str = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+) -> Tuple[float, float]:
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for batch in tqdm(
+            dataloader,
+            desc=f"{loader_args[0]}({loader_args[1]}/{loader_args[2]})",
+        ):
+            data = maybe_dictionarize(batch)
+
+            images = data["images"].to(device)
+            labels = data["labels"].to(device)
+
+            outputs = model(images)
+
+            predictions = outputs.argmax(dim=1)
+            correct += (predictions == labels).sum().item()
+            total += labels.size(0)
+    acc = correct / total
+    return acc, acc / norm_divisor if norm_divisor else norm_divisor

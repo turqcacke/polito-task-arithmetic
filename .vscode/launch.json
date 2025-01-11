@@ -35,15 +35,14 @@
             }
         },
         {
-            "name": "Eval(Single Task): Merged",
+            "name": "Eval(Task Addition)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/eval_single_task.py",
+            "program": "${workspaceFolder}/eval_task_addition.py",
             "console": "integratedTerminal",
             "args": [
                 "--data-location=./data",
                 "--save=./checkpoints",
-                "--st-model=merged"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"

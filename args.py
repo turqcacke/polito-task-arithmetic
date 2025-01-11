@@ -9,6 +9,7 @@ from typing import Optional, List, Literal, Protocol
 class ArgsProto(Protocol):
     data_location: str
     st_model: Optional[consts.SINGLE_TASK_MODEL_TYPES]
+    st_alpha: Optional[float]
     eval_datasets: Optional[List[str]]
     train_dataset: Optional[List[str]]
     exp_name: Optional[str]
@@ -41,6 +42,12 @@ def parse_arguments() -> ArgsProto:
         choices=["pretrained", "finetuned", "merged"],
         default="finetuned",
         help="Which model is used for generating eval_single_task `json` report",
+    )
+    parser.add_argument(
+        "--st-alpha",
+        type=float,
+        default=None,
+        help="Alpha scaling (only for `prerained` and `finetuned` models)",
     )
     parser.add_argument(
         "--data-location",

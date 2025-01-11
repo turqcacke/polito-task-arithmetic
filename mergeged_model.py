@@ -17,6 +17,7 @@ class CheckpointPath:
 class MergedModelBuilder:
     def __init__(self, checkpoints_dir: str):
         self._checkpoints_dir = checkpoints_dir
+        self._vectors_cache: Dict[str, NonLinearTaskVector] = {}
         self.checkpoints = self._get_checkpoint_path()
 
     def _load_tasks(
@@ -64,10 +65,10 @@ class MergedModelBuilder:
         self,
         head: ClassificationHead,
         pretrained_model: str,
-        alpha: float = 1.0,
+        alpha: float = consts.DEFAULT_ALPHA,
         dataset: Optional[str] = None,
     ) -> ImageClassifier:
-        vector_tasks = self._load_tasks(
+        vector_tasks = self._vectors_cache.get(dataset, None) or self._load_tasks(
             pretrained_model,
             lambda name: name == dataset if dataset else lambda _: True,
         )
@@ -76,11 +77,17 @@ class MergedModelBuilder:
         if not vector_tasks:
             raise AssertionError("No task defined with provided filter.")
 
+        if isinstance(vector_tasks, NonLinearTaskVector):
+            vector_tasks = {None: vector_tasks}
+
         for task in vector_tasks.values():
             if not add_vector:
                 add_vector = task
                 continue
             add_vector += task
+
+        if dataset not in self._vectors_cache:
+            self._vectors_cache[dataset] = add_vector
 
         merged_ecoder = add_vector.apply_to(pretrained_model, scaling_coef=alpha)
         return ImageClassifier(merged_ecoder, head)
