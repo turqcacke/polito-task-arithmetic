@@ -4,14 +4,13 @@ import json
 import os
 import torch
 import utils
-from functools import reduce
 from args import ArgsProto, parse_arguments
 from datasets.registry import get_dataset
 from datasets.common import get_dataloader
 from eval_single_task import TaskAccuracyStat, AccuracyStats
 from heads import get_classification_head
 from mergeged_model import MergedModelBuilder
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, Optional
 from tqdm import tqdm
 
 
@@ -29,10 +28,6 @@ class MultiTaskAccuracyStats:
         self._best_alpha: Optional[float] = None
         self._single_task_accuracies = self._load_single_task_accuracies()
 
-    def get_save_path(self, filename: str) -> str:
-        os.makedirs(str(self._SAVE_DIR), exist_ok=True)
-        return str(self._SAVE_DIR / filename)
-
     def _load_single_task_accuracies(self) -> Dict[str, float]:
         json_path = (
             consts.BASE_DIR
@@ -47,7 +42,14 @@ class MultiTaskAccuracyStats:
             accuracies_json: List[TaskAccuracyStat] = json.load(f)
         return {acc["dataset"]: acc["train"]["absolute"] for acc in accuracies_json}
 
-    def best_alpha(self):
+    def get_save_path(self, filename: str) -> str:
+        os.makedirs(str(self._SAVE_DIR), exist_ok=True)
+        return str(self._SAVE_DIR / filename)
+
+    def set_best_alpha(self, alpha: float):
+        self._best_alpha = alpha
+
+    def find_best_alpha(self):
         best_alpha = 0.0
         best_avg_acc = 0.0
         single_task_accuracies = self._single_task_accuracies
@@ -100,7 +102,7 @@ class MultiTaskAccuracyStats:
         return best_alpha
 
     def generate(self, path: str) -> List[AccuracyStats]:
-        alpha = self._best_alpha or self.best_alpha()
+        alpha = self._best_alpha or self.find_best_alpha()
         stat_gen = AccuracyStats(
             self._program_args, self._pretrined, self._program_args.save
         )
@@ -114,11 +116,14 @@ if __name__ == "__main__":
     stats_gen_multi_task = MultiTaskAccuracyStats(
         args, str(checkpoints_dir / consts.PRETRAINED_MODEL_NAME)
     )
-    best_alpha = stats_gen_multi_task.best_alpha()
+
+    best_alpha = args.st_alpha or stats_gen_multi_task.find_best_alpha()
+    stats_gen_multi_task.set_best_alpha(best_alpha)
+
     report_path = stats_gen_multi_task.get_save_path(
         consts.MULTI_TASK_SAVE_FILE.format(suffix=f"{best_alpha:.2f}".replace(".", "_"))
     )
-    report = stats_gen_multi_task.generate()
+    report = stats_gen_multi_task.generate(report_path)
 
     print("\nGenerated report for following datasets:")
     print(f"\t{str([stat['dataset'] for stat in report])}")

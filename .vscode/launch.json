@@ -49,6 +49,21 @@
             }
         },
         {
+            "name": "Eval(Task Addition): Generate",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/eval_task_addition.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--data-location=./data",
+                "--save=./checkpoints",
+                "--st-alpha=0.3"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
