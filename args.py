@@ -1,11 +1,47 @@
 import argparse
+import consts
 import os
-
+from typing import Protocol
 import torch
+from typing import Optional, List, Literal, Protocol
 
 
-def parse_arguments() -> argparse.Namespace:
+class ArgsProto(Protocol):
+    data_location: str
+    st_model: Optional[consts.SINGLE_TASK_MODEL_TYPES]
+    eval_datasets: Optional[List[str]]
+    train_dataset: Optional[List[str]]
+    exp_name: Optional[str]
+    results_db: Optional[str]
+    model: str
+    batch_size: int
+    num_grad_accumulation: int
+    lr: float
+    wd: float
+    ls: float
+    warmup_length: int
+    epochs: int
+    load: Optional[List[str]]
+    save: Optional[str]
+    cache_dir: Optional[str]
+    openclip_cachedir: str
+    world_size: int
+    checkpoint_every: int
+    port: int
+    seed: Optional[int]
+    finetuning_mode: Optional[Literal["standard", "linear", "posthoc", "none"]]
+    n_eval_points: int
+    device: str
+
+
+def parse_arguments() -> ArgsProto:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--st-model",
+        choices=["pretrained", "finetuned", "merged"],
+        default="finetuned",
+        help="Which model is used for generating eval_single_task `json` report",
+    )
     parser.add_argument(
         "--data-location",
         type=str,
