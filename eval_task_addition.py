@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 from tqdm import tqdm
 
 
-class TaskAccuracyStatsFisher(AccuracyStats):
+class TaskAccuracyStatsFisher(TaskAccuracyStat):
     fisher: Optional[float]
 
 
@@ -47,7 +47,7 @@ class MultiTaskAccuracyStats:
         return {acc["dataset"]: acc["train"]["absolute"] for acc in accuracies_json}
 
     def _claculate_fisher(
-        self, stats: List[TaskAccuracyStat]
+        self, stats: List[TaskAccuracyStatsFisher]
     ) -> List[TaskAccuracyStatsFisher]:
         new_stats = []
         for stat in tqdm(stats, desc="Calculating fisher"):
@@ -56,7 +56,7 @@ class MultiTaskAccuracyStats:
             fisher = utils.train_diag_fim_logtr(
                 self._program_args, model, stat["dataset"]
             )
-            new_stats.append(TaskAccuracyStat(**stat, fisher=fisher))
+            new_stats.append(TaskAccuracyStatsFisher(**stat, fisher=fisher))
         return new_stats
 
     def get_save_path(self, filename: str) -> str:
@@ -118,7 +118,7 @@ class MultiTaskAccuracyStats:
         self._best_alpha = alpha
         return best_alpha
 
-    def generate(self, path: str) -> List[TaskAccuracyStat]:
+    def generate(self, path: str, fisher: bool = False) -> List[TaskAccuracyStat]:
         alpha = self._best_alpha or self.find_best_alpha()
         stat_gen = AccuracyStats(
             self._program_args, self._pretrined, self._program_args.save
@@ -127,7 +127,7 @@ class MultiTaskAccuracyStats:
         stats_result = stat_gen.generate(
             path, "merged", self._single_task_accuracies, True
         )
-        return self._claculate_fisher(stats_result)
+        return self._claculate_fisher(stats_result) if fisher else stats_result
 
 
 if __name__ == "__main__":
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     report_path = stats_gen_multi_task.get_save_path(
         consts.MULTI_TASK_SAVE_FILE.format(suffix=f"{best_alpha:.2f}".replace(".", "_"))
     )
-    report = stats_gen_multi_task.generate(report_path)
+    report = stats_gen_multi_task.generate(report_path, True)
 
     print("\nGenerated report for following datasets:")
     print(f"\t{str([stat['dataset'] for stat in report])}")
