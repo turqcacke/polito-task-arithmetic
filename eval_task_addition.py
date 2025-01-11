@@ -14,6 +14,10 @@ from typing import Dict, List, Optional
 from tqdm import tqdm
 
 
+class TaskAccuracyStatsFisher(AccuracyStats):
+    fisher: Optional[float]
+
+
 class MultiTaskAccuracyStats:
     _ALPHA_RANGE = [round(0.05 * (i + 1), 2) for i in range(int(1 / 0.05))]
     _SAVE_DIR = consts.BASE_DIR / consts.EVAL_FOLDER
@@ -41,6 +45,19 @@ class MultiTaskAccuracyStats:
         with open(str(json_path), "r") as f:
             accuracies_json: List[TaskAccuracyStat] = json.load(f)
         return {acc["dataset"]: acc["train"]["absolute"] for acc in accuracies_json}
+
+    def _claculate_fisher(
+        self, stats: List[TaskAccuracyStat]
+    ) -> List[TaskAccuracyStatsFisher]:
+        new_stats = []
+        for stat in tqdm(stats, desc="Calculating fisher"):
+            head = get_classification_head(self._program_args, stat["dataset"])
+            model = self._model_builder.build(head, self._pretrined, self._best_alpha)
+            fisher = utils.train_diag_fim_logtr(
+                self._program_args, model, stat["dataset"]
+            )
+            new_stats.append(TaskAccuracyStat(**stat, fisher=fisher))
+        return new_stats
 
     def get_save_path(self, filename: str) -> str:
         os.makedirs(str(self._SAVE_DIR), exist_ok=True)
@@ -101,13 +118,16 @@ class MultiTaskAccuracyStats:
         self._best_alpha = alpha
         return best_alpha
 
-    def generate(self, path: str) -> List[AccuracyStats]:
+    def generate(self, path: str) -> List[TaskAccuracyStat]:
         alpha = self._best_alpha or self.find_best_alpha()
         stat_gen = AccuracyStats(
             self._program_args, self._pretrined, self._program_args.save
         )
         self._program_args.st_alpha = alpha
-        return stat_gen.generate(path, "merged", self._single_task_accuracies, True)
+        stats_result = stat_gen.generate(
+            path, "merged", self._single_task_accuracies, True
+        )
+        return self._claculate_fisher(stats_result)
 
 
 if __name__ == "__main__":
