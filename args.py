@@ -75,7 +75,8 @@ def parse_arguments() -> ArgsProto:
     parser.add_argument(
         "--model",
         type=str,
-        default="ViT-B-32",
+        default="ViT-B-32-quickgelu",  # New default model
+        # default="ViT-B-32",
         help="The type of model (e.g. RN50, ViT-B-32).",
     )
     parser.add_argument(

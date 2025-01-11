@@ -745,3 +745,4 @@ checkpoints/*
 data/*
 eval/*
 m_test*.py
+checkpoints.zip
