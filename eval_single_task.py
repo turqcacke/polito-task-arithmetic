@@ -67,13 +67,15 @@ class AccuracyStats:
         save=False,
         encoding: str = "utf-8",
     ) -> List[TaskAccuracyStat]:
-        """Generation method, used to generate `json`
+        """Generation method, used to generate `json`s
         and start evaluation
 
         :param path: Path where to save `json` report
         :type path: str
         :param model_type: Specifies which model checkpoint to use
         :type model_type: consts.SINGLE_TASK_MODEL_TYPES
+        :param normalized_idvisors: Divisers for normalized accuracy, defaults to {}
+        :type normalized_idvisors: Dict[str, float], optional
         :param save: Whether to save to a file or not, defaults to False
         :type save: bool, optional
         :param encoding: `json` file encoding, defaults to "utf-8"
