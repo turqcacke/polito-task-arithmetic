@@ -3,14 +3,13 @@ import torch
 import json
 import os
 import utils
-from torch.utils.data import DataLoader
 from args import ArgsProto, parse_arguments
 from datasets.registry import get_dataset
 from datasets.common import get_dataloader
 from heads import get_classification_head
 from mergeged_model import MergedModelBuilder
 from modeling import ImageClassifier, ImageEncoder
-from typing import Dict, List, Optional, Tuple, TypedDict, Any, Literal
+from typing import Dict, List, Optional, Tuple, TypedDict, Literal
 from pathlib import Path
 
 
