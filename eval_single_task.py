@@ -155,7 +155,7 @@ if __name__ == "__main__":
     alpha = args.st_alpha
 
     model_type = args.st_model
-    alpha_suffix = f"_{alpha:.2f}" if alpha else ""
+    alpha_suffix = f"_{alpha:.2f}".replace(".", "_") if alpha else ""
 
     os.makedirs(str(save_dir), exist_ok=True)
 

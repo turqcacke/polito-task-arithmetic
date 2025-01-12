@@ -35,6 +35,22 @@
             }
         },
         {
+            "name": "Eval(Single Task): Finetuned (best alpha)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/eval_single_task.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--data-location=./data",
+                "--save=./checkpoints",
+                "--st-model=finetuned",
+                "--st-alpha=0.3"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Eval(Task Addition)",
             "type": "debugpy",
             "request": "launch",
