@@ -47,7 +47,11 @@ class MultiTaskAccuracyStats:
         return {acc["dataset"]: acc["train"]["absolute"] for acc in accuracies_json}
 
     def _claculate_fisher(
-        self, path: str, stats: List[TaskAccuracyStatsFisher], save: bool = False
+        self,
+        path: str,
+        stats: List[TaskAccuracyStatsFisher],
+        save: bool = False,
+        encoding: str = "utf-8",
     ) -> List[TaskAccuracyStatsFisher]:
         new_stats = []
         for stat in tqdm(stats, desc="Calculating fisher"):
@@ -58,8 +62,8 @@ class MultiTaskAccuracyStats:
             )
             new_stats.append(TaskAccuracyStatsFisher(**stat, fisher=fisher))
         if save:
-            with open(path, "+r") as f:
-                json.dump(new_stats, f)
+            with open(path, "+r", encoding=encoding) as f:
+                json.dump(new_stats, f, indent="\t")
         return new_stats
 
     def get_save_path(self, filename: str) -> str:
