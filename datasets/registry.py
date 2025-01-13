@@ -1,4 +1,5 @@
 from collections import Counter
+from functools import reduce
 import sys
 import inspect
 import random
@@ -99,33 +100,34 @@ def balance_dataset(
     new_dataset_calss = type(new_dataset_class_name, (GenericDataset), {})
     new_dataset: GenericDataset = new_dataset_calss()
 
-    for split_type in ("train", "test"):
-        loader_attr = f"{split_type}_loader"
-        dataset_attr = f"{split_type}_dataset"
+    dataloader: torch.utils.data.DataLoader = dataset.train_loader
 
-        labels = [label for _, label in getattr(dataset, dataset_attr)]
-        class_counts = Counter(labels)
-        min_class_count = min(class_counts.values())
+    data_count = {c: [] for c in dataset.classnames}
+    balanced_indeces = []
 
-        balanced_indices = []
-        for class_label in class_counts:
-            class_indices = [
-                i for i, (_, label) in enumerate(dataset) if label == class_label
-            ]
-            sampled_indices = np.random.choice(
-                class_indices, min_class_count, replace=False
-            )
-            balanced_indices += sampled_indices
+    for n, batch in enumerate(dataloader):
+        _, labels = batch
+        offset = n * dataloader.batch_size
+        for index, label in enumerate(labels):
+            data_count[label].append(offset + index)
 
-        new_dataset.__setattr__(dataset_attr, Subset(dataset, balanced_indices))
-        new_dataset.__setattr__(
-            loader_attr,
-            torch.utils.data.DataLoader(
-                getattr(new_dataset, dataset_attr),
-                batch_size=batch_size,
-                num_workers=num_workers,
-            ),
-        )
+    min_count = reduce(
+        lambda acc, v: min(acc, len(v)), data_count.values(), sys.maxsize
+    )
+
+    for indices in data_count.values():
+        sampled_indeces = np.random.choice(indices, min_count, replace=False)
+        balanced_indeces += sampled_indeces
+
+    new_dataset.train_dataset = Subset(dataset, balanced_indeces)
+    new_dataset.train_loader = torch.utils.data.DataLoader(
+        new_dataset.train_dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+    )
+    new_dataset.test_dataset = dataset.test_dataset
+    new_dataset.test_loader = dataset.test_loader
+
     new_dataset.classnames = copy.copy(dataset.classnames)
     return new_dataset
 
@@ -152,15 +154,18 @@ def get_dataset(
                 location,
                 batch_size,
                 num_workers,
-                balance,
+                balance=False,
             )
-            dataset = split_train_into_train_val(
+            train_val_dataset = split_train_into_train_val(
                 base_dataset,
                 dataset_name,
                 batch_size,
                 num_workers,
                 val_fraction,
                 max_val_samples,
+            )
+            dataset = balance_dataset(
+                train_val_dataset, dataset_name + "Balanced", batch_size, num_workers
             )
             return dataset
     else:
