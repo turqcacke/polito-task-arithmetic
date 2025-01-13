@@ -27,11 +27,11 @@ class ImageEncoder(torch.nn.Module):
         if not keep_lang and hasattr(self.model, "transformer"):
             delattr(self.model, "transformer")
 
-    def forward(self, images: Any) -> Union[torch.Tensor, Any]:
+    def forward(self, images: Any) -> Union[torch._C.TensorBase, Any]:
         assert self.model is not None
         return self.model.encode_image(images)
 
-    def __call__(self, inputs: Any) -> Union[torch.Tensor, Any]:
+    def __call__(self, inputs: Any) -> Union[torch._C.TensorBase, Any]:
         return self.forward(inputs)
 
     def save(self, filename: str) -> None:
@@ -86,12 +86,12 @@ class ClassificationHead(torch.nn.Linear):
         else:
             self.bias = torch.nn.Parameter(torch.zeros_like(self.bias))
 
-    def forward(self, inputs: Any) -> torch.Tensor:
+    def forward(self, inputs: Any) -> torch._C.TensorBase:
         if self.normalize:
             inputs = inputs / inputs.norm(dim=-1, keepdim=True)
         return super().forward(inputs)
 
-    def __call__(self, inputs: Any) -> torch.Tensor:
+    def __call__(self, inputs: Any) -> torch._C.TensorBase:
         return self.forward(inputs)
 
     def save(self, filename: str) -> None:
@@ -119,12 +119,12 @@ class ImageClassifier(torch.nn.Module):
         self.classification_head.weight.requires_grad_(False)
         self.classification_head.bias.requires_grad_(False)
 
-    def forward(self, inputs: Any) -> torch.Tensor:
+    def forward(self, inputs: Any) -> torch._C.TensorBase:
         features = self.image_encoder(inputs)
         outputs = self.classification_head(features)
         return outputs
 
-    def __call__(self, inputs: Any) -> torch.Tensor:
+    def __call__(self, inputs: Any) -> torch._C.TensorBase:
         return self.forward(inputs)
 
     def save(self, filename: str) -> None:

@@ -8,6 +8,7 @@ from typing import Optional, List, Literal, Protocol
 
 class ArgsProto(Protocol):
     data_location: str
+    balance: bool
     st_model: Optional[consts.SINGLE_TASK_MODEL_TYPES]
     st_alpha: Optional[float]
     eval_datasets: Optional[List[str]]
@@ -37,6 +38,12 @@ class ArgsProto(Protocol):
 
 def parse_arguments() -> ArgsProto:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--balance",
+        type=bool,
+        default=False,
+        help="Flag whether balance train dataset or not",
+    )
     parser.add_argument(
         "--st-model",
         choices=["pretrained", "finetuned", "merged"],
