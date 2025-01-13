@@ -1,11 +1,61 @@
 import argparse
+import consts
 import os
-
+from typing import Protocol
 import torch
+from typing import Optional, List, Literal, Protocol
 
 
-def parse_arguments():
+class ArgsProto(Protocol):
+    data_location: str
+    balance: bool
+    st_model: Optional[consts.SINGLE_TASK_MODEL_TYPES]
+    st_alpha: Optional[float]
+    eval_datasets: Optional[List[str]]
+    train_dataset: Optional[List[str]]
+    exp_name: Optional[str]
+    results_db: Optional[str]
+    model: str
+    batch_size: int
+    num_grad_accumulation: int
+    lr: float
+    wd: float
+    ls: float
+    warmup_length: int
+    epochs: int
+    load: Optional[List[str]]
+    save: Optional[str]
+    cache_dir: Optional[str]
+    openclip_cachedir: str
+    world_size: int
+    checkpoint_every: int
+    port: int
+    seed: Optional[int]
+    finetuning_mode: Optional[Literal["standard", "linear", "posthoc", "none"]]
+    n_eval_points: int
+    device: str
+
+
+def parse_arguments() -> ArgsProto:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--balance",
+        type=bool,
+        default=False,
+        help="Flag whether balance train dataset or not",
+    )
+    parser.add_argument(
+        "--st-model",
+        choices=["pretrained", "finetuned", "merged"],
+        default="finetuned",
+        help="Which model is used for generating eval_single_task `json` report",
+    )
+    parser.add_argument(
+        "--st-alpha",
+        type=float,
+        default=None,
+        help="Alpha scaling (only for `prerained` and `finetuned` models)",
+    )
     parser.add_argument(
         "--data-location",
         type=str,
@@ -39,7 +89,8 @@ def parse_arguments():
     parser.add_argument(
         "--model",
         type=str,
-        default="ViT-B-32",
+        default="ViT-B-32-quickgelu",  # New default model
+        # default="ViT-B-32",
         help="The type of model (e.g. RN50, ViT-B-32).",
     )
     parser.add_argument(

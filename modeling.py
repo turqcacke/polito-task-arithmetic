@@ -1,22 +1,19 @@
 import open_clip
 import torch
-
 import utils
+from typing import Mapping, Optional, Any, Union, List, NamedTuple
+from args import ArgsProto
+
+
+class StateDictMising(NamedTuple):
+    missing_keys: List[Any]
+    unexpected_keys: List[Any]
 
 
 class ImageEncoder(torch.nn.Module):
-    def __init__(self, args, keep_lang=False):
+    def __init__(self, args: ArgsProto, keep_lang=False) -> None:
         super().__init__()
-
-        print(f"Loading {args.model} pre-trained weights.")
-        if "__pretrained__" in args.model:
-            name, pretrained = args.model.split("__pretrained__")
-        elif "__init__" in args.model:
-            print("Using random initialization.")
-            name, pretrained = args.model.split("__init__")[0], None
-        else:
-            name = args.model
-            pretrained = "openai"
+        name, pretrained = self.extract_model_args(args)
         (
             self.model,
             self.train_preprocess,
@@ -30,33 +27,51 @@ class ImageEncoder(torch.nn.Module):
         if not keep_lang and hasattr(self.model, "transformer"):
             delattr(self.model, "transformer")
 
-    def forward(self, images):
+    def forward(self, images: Any) -> Union[torch._C.TensorBase, Any]:
         assert self.model is not None
         return self.model.encode_image(images)
 
-    def __call__(self, inputs):
+    def __call__(self, inputs: Any) -> Union[torch._C.TensorBase, Any]:
         return self.forward(inputs)
 
-    def save(self, filename):
+    def save(self, filename: str) -> None:
         print(f"Saving image encoder to {filename}")
         utils.torch_save(self, filename)
 
     @classmethod
-    def load(cls, model_name, filename):
+    def load(cls, args: ArgsProto, filename: str) -> StateDictMising:
         print(f"Loading image encoder from {filename}")
-        state_dict = torch.load(filename, map_location="cpu")
-        return cls.load(model_name, state_dict)
+        load_model = utils.torch_load(filename)
+        if isinstance(load_model, ImageEncoder):
+            return load_model
+        return cls.load_from_state_dict(args, load_model)
 
     @classmethod
-    def load_from_state_dict(cls, model_name, state_dict):
+    def load_from_state_dict(
+        cls, args: ArgsProto, state_dict: Mapping[str, Any]
+    ) -> StateDictMising:
+        model, pretrained = cls.extract_model_args(args)
         (
-            self.model,
-            self.train_preprocess,
-            self.val_preprocess,
+            cls.model,
+            cls.train_preprocess,
+            cls.val_preprocess,
         ) = open_clip.create_model_and_transforms(
-            name, pretrained=pretrained, cache_dir=args.openclip_cachedir
+            model, pretrained=pretrained, cache_dir=args.openclip_cachedir
         )
-        self.model.load_from_state_dict(state_dict)
+        return cls.model.load_state_dict(state_dict)
+
+    @classmethod
+    def extract_model_args(cls, args: ArgsProto) -> tuple[str, Optional[str]]:
+        print(f"Loading {args.model} pre-trained weights.")
+        if "__pretrained__" in args.model:
+            name, pretrained = args.model.split("__pretrained__")
+        elif "__init__" in args.model:
+            print("Using random initialization.")
+            name, pretrained = args.model.split("__init__")[0], None
+        else:
+            name = args.model
+            pretrained = "openai"
+        return name, pretrained
 
 
 class ClassificationHead(torch.nn.Linear):
@@ -71,26 +86,28 @@ class ClassificationHead(torch.nn.Linear):
         else:
             self.bias = torch.nn.Parameter(torch.zeros_like(self.bias))
 
-    def forward(self, inputs):
+    def forward(self, inputs: Any) -> torch._C.TensorBase:
         if self.normalize:
             inputs = inputs / inputs.norm(dim=-1, keepdim=True)
         return super().forward(inputs)
 
-    def __call__(self, inputs):
+    def __call__(self, inputs: Any) -> torch._C.TensorBase:
         return self.forward(inputs)
 
-    def save(self, filename):
+    def save(self, filename: str) -> None:
         print(f"Saving classification head to {filename}")
         utils.torch_save(self, filename)
 
     @classmethod
-    def load(cls, filename):
+    def load(cls, filename: str) -> Any:
         print(f"Loading classification head from {filename}")
         return utils.torch_load(filename)
 
 
 class ImageClassifier(torch.nn.Module):
-    def __init__(self, image_encoder, classification_head):
+    def __init__(
+        self, image_encoder: ImageEncoder, classification_head: ClassificationHead
+    ):
         super().__init__()
         self.image_encoder = image_encoder
         self.classification_head = classification_head
@@ -98,23 +115,23 @@ class ImageClassifier(torch.nn.Module):
             self.train_preprocess = self.image_encoder.train_preprocess
             self.val_preprocess = self.image_encoder.val_preprocess
 
-    def freeze_head(self):
+    def freeze_head(self) -> None:
         self.classification_head.weight.requires_grad_(False)
         self.classification_head.bias.requires_grad_(False)
 
-    def forward(self, inputs):
+    def forward(self, inputs: Any) -> torch._C.TensorBase:
         features = self.image_encoder(inputs)
         outputs = self.classification_head(features)
         return outputs
 
-    def __call__(self, inputs):
+    def __call__(self, inputs: Any) -> torch._C.TensorBase:
         return self.forward(inputs)
 
-    def save(self, filename):
+    def save(self, filename: str) -> None:
         print(f"Saving image classifier to {filename}")
         utils.torch_save(self, filename)
 
     @classmethod
-    def load(cls, filename):
+    def load(cls, filename: str) -> Any:
         print(f"Loading image classifier from {filename}")
         return utils.torch_load(filename)
