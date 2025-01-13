@@ -35,7 +35,7 @@
             }
         },
         {
-            "name": "Eval(Single Task): Merged",
+            "name": "Eval(Single Task): Finetuned (best alpha)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/eval_single_task.py",
@@ -43,7 +43,37 @@
             "args": [
                 "--data-location=./data",
                 "--save=./checkpoints",
-                "--st-model=merged"
+                "--st-model=finetuned",
+                "--st-alpha=0.3"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Eval(Task Addition)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/eval_task_addition.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--data-location=./data",
+                "--save=./checkpoints",
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Eval(Task Addition): Generate",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/eval_task_addition.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--data-location=./data",
+                "--save=./checkpoints",
+                "--st-alpha=0.3"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"

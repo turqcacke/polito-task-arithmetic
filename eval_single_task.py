@@ -2,32 +2,28 @@ import consts
 import torch
 import json
 import os
-from torch.utils.data import DataLoader
+import utils
 from args import ArgsProto, parse_arguments
 from datasets.registry import get_dataset
-from datasets.common import maybe_dictionarize
 from datasets.common import get_dataloader
 from heads import get_classification_head
 from mergeged_model import MergedModelBuilder
 from modeling import ImageClassifier, ImageEncoder
-from typing import Optional, TypedDict, Any, Literal
-from tqdm import tqdm
+from typing import Dict, List, Optional, Tuple, TypedDict, Literal
 from pathlib import Path
+
+
+class Stat(TypedDict):
+    absolute: Optional[float]
+    normalized: Optional[float]
 
 
 class TaskAccuracyStat(TypedDict):
     """Wrapper for accuracy stats, can be used as `type`"""
 
     dataset: str
-    train: str
-    test: str
-
-
-# TODO: Remove if won't be used if future
-class TaskAccuracyData(TypedDict):
-    finetuned: Optional[TaskAccuracyStat]
-    pretrained: Optional[TaskAccuracyStat]
-    merged: Optional[TaskAccuracyStat]
+    train: Stat
+    test: Stat
 
 
 class AccuracyStats:
@@ -49,11 +45,12 @@ class AccuracyStats:
         self, dataset: str, model_type: Literal["pretrained", "finetuned", "merged"]
     ):
         head = get_classification_head(self._program_args, dataset + "Val")
+        alpha = self._program_args.st_alpha or consts.DEFAULT_ALPHA
         match model_type:
             case "merged":
-                model = self._model_builder.build(head, self._target)
+                model = self._model_builder.build(head, self._target, alpha)
             case "finetuned":
-                model = self._model_builder.build(head, self._target, dataset=dataset)
+                model = self._model_builder.build(head, self._target, alpha, dataset)
             case _:
                 model = ImageClassifier(
                     ImageEncoder.load(self._program_args, self._target), head
@@ -65,16 +62,19 @@ class AccuracyStats:
         self,
         path: str,
         model_type: consts.SINGLE_TASK_MODEL_TYPES,
+        normalized_idvisors: Dict[str, float] = {},
         save=False,
         encoding: str = "utf-8",
-    ) -> list[TaskAccuracyStat]:
-        """Generation method, used to generate `json`
+    ) -> List[TaskAccuracyStat]:
+        """Generation method, used to generate `json`s
         and start evaluation
 
         :param path: Path where to save `json` report
         :type path: str
         :param model_type: Specifies which model checkpoint to use
         :type model_type: consts.SINGLE_TASK_MODEL_TYPES
+        :param normalized_idvisors: Divisers for normalized accuracy, defaults to {}
+        :type normalized_idvisors: Dict[str, float], optional
         :param save: Whether to save to a file or not, defaults to False
         :type save: bool, optional
         :param encoding: `json` file encoding, defaults to "utf-8"
@@ -107,15 +107,31 @@ class AccuracyStats:
                 index + 1,
                 len(self._model_builder.checkpoints),
             )
+            get_stat = lambda *args, **kwargs: Stat(
+                **{
+                    t[0]: t[1]
+                    for t in zip(
+                        ("absolute", "normalized"),
+                        self._evaluate_model(
+                            *args,
+                            **kwargs,
+                        ),
+                    )
+                }
+            )
             task_accuracy_stat = TaskAccuracyStat(
                 dataset=dataset,
-                train=self._evaluate_model(
+                train=get_stat(
                     model,
                     val_loader,
-                    get_loader_stats(f"(train)[{model_type}]"),
+                    norm_divisor=normalized_idvisors.get(dataset),
+                    loader_args=get_loader_stats(f"(train)[{model_type}]"),
                 ),
-                test=self._evaluate_model(
-                    model, test_loader, get_loader_stats(f"(test)[{model_type}]")
+                test=get_stat(
+                    model,
+                    test_loader,
+                    norm_divisor=normalized_idvisors.get(dataset),
+                    loader_args=get_loader_stats(f"(test)[{model_type}]"),
                 ),
             )
             stats.append(task_accuracy_stat)
@@ -126,31 +142,8 @@ class AccuracyStats:
 
         return stats
 
-    def _evaluate_model(
-        self,
-        model: ImageClassifier,
-        dataloader: DataLoader | Any,
-        loader_arg: tuple[str, int, int] = ("Undefined", 0, 0),
-    ) -> float:
-        correct = 0
-        total = 0
-
-        with torch.no_grad():
-            for batch in tqdm(
-                dataloader,
-                desc=f"{loader_arg[0]}({loader_arg[1]}/{loader_arg[2]})",
-            ):
-                data = maybe_dictionarize(batch)
-
-                images = data["images"].to(self._device)
-                labels = data["labels"].to(self._device)
-
-                outputs = model(images)
-
-                predictions = outputs.argmax(dim=1)
-                correct += (predictions == labels).sum().item()
-                total += labels.size(0)
-        return correct / total
+    def _evaluate_model(self, *args, **kwargs) -> Tuple[float, float]:
+        return utils.evaluate_model(*args, **kwargs)
 
 
 if __name__ == "__main__":
@@ -158,16 +151,21 @@ if __name__ == "__main__":
 
     checkpoints_dir = Path(args.save)
     save_dir = consts.BASE_DIR / consts.EVAL_FOLDER
+    alpha = args.st_alpha
+
     model_type = args.st_model
+    alpha_suffix = f"_{alpha:.2f}".replace(".", "_") if alpha else ""
 
     os.makedirs(str(save_dir), exist_ok=True)
 
-    save_dir = save_dir / consts.SINGLE_TASK_SAVE_FILE.format(suffix=f"_{model_type}")
+    save_dir = save_dir / consts.SINGLE_TASK_SAVE_FILE.format(
+        suffix=f"_{model_type}{alpha_suffix}"
+    )
     stats = AccuracyStats(
         args, str(checkpoints_dir / consts.PRETRAINED_MODEL_NAME), str(checkpoints_dir)
     )
 
-    stats = stats.generate(str(save_dir), args.st_model, True)
+    stats = stats.generate(str(save_dir), args.st_model, save=True)
 
     print("\nGenerated report for following datasets:")
     print(f"\t{str([stat['dataset'] for stat in stats])}")
