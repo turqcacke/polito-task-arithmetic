@@ -98,7 +98,12 @@ def balance_dataset(
 ) -> GenericDataset:
     assert dataset.train_dataset and dataset.train_loader
 
-    dataloader: torch.utils.data.DataLoader = dataset.train_loader
+    dataloader: torch.utils.data.DataLoader = torch.utils.data.DataLoader(
+        dataset.train_dataset,
+        dataset.train_loader.batch_size,
+        False,
+        num_workers=dataset.train_loader.num_workers,
+    )
     data_count: Dict[torch.TensorBase, List[int]] = {}
     balanced_indeces = []
     n = 0
