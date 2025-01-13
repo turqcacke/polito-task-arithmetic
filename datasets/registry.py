@@ -164,8 +164,15 @@ def get_dataset(
                 val_fraction,
                 max_val_samples,
             )
-            dataset = balance_dataset(
-                train_val_dataset, dataset_name + "Balanced", batch_size, num_workers
+            dataset = (
+                balance_dataset(
+                    train_val_dataset,
+                    dataset_name + "Balanced",
+                    batch_size,
+                    num_workers,
+                )
+                if balance
+                else train_val_dataset
             )
             return dataset
     else:
