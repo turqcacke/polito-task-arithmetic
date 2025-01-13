@@ -83,4 +83,12 @@ if __name__ == "__main__":
     balance = args.balance
     for dataset_name, epochs in datasets.items():
         save_path = f"{save_directory}{dataset_name}_finetuned.pt"
-        finetune_model(dataset_name, args, save_path, epochs, balance_ds=balance)
+        finetune_model(
+            dataset_name,
+            args,
+            save_path,
+            epochs,
+            lr=args.lr,
+            batch_size=args.batch_size,
+            balance_ds=balance,
+        )
