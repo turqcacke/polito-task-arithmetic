@@ -1,11 +1,10 @@
 from email.headerregistry import DateHeader
 import os
-from typing import Any, Tuple
+from typing import Any, Tuple, Callable
 import torch
 from tqdm.auto import tqdm
 from datasets.common import maybe_dictionarize
 from datasets.registry import get_dataset
-from modeling import ImageClassifier
 
 
 def torch_save(model, save_path):
@@ -101,7 +100,7 @@ def train_diag_fim_logtr(args, model, dataset_name: str, samples_nr: int = 2000)
 
 
 def evaluate_model(
-    model: ImageClassifier,
+    model: Callable[[Any], torch._C.TensorBase],
     dataloader: DateHeader | Any,
     norm_divisor: float = None,
     loader_args: Tuple[str, int, int] = ("Undefined", 0, 0),

@@ -7,9 +7,10 @@ import torch
 import copy
 import numpy as np
 
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 from torch.utils.data import Subset
 from torch.utils.data.dataset import random_split
+from tqdm import tqdm
 
 from datasets.cars import Cars
 from datasets.cifar10 import CIFAR10
@@ -97,19 +98,21 @@ def balance_dataset(
 ) -> GenericDataset:
     assert dataset.train_dataset
 
-    new_dataset_calss = type(new_dataset_class_name, (GenericDataset), {})
-    new_dataset: GenericDataset = new_dataset_calss()
-
     dataloader: torch.utils.data.DataLoader = dataset.train_loader
-
-    data_count = {c: [] for c in dataset.classnames}
+    data_count: Dict[torch.TensorBase, List[int]] = {}
     balanced_indeces = []
+    n = 0
 
-    for n, batch in enumerate(dataloader):
+    for batch in tqdm(
+        dataloader,
+        desc=f"Balancing[{new_dataset_class_name.replace('Balanced', '')}]",
+    ):
         _, labels = batch
         offset = n * dataloader.batch_size
         for index, label in enumerate(labels):
-            data_count[label].append(offset + index)
+            data_count[label.item()] = data_count.get(label.item(), list())
+            data_count[label.item()].append(offset + index)
+        n += 1
 
     min_count = reduce(
         lambda acc, v: min(acc, len(v)), data_count.values(), sys.maxsize
@@ -117,9 +120,13 @@ def balance_dataset(
 
     for indices in data_count.values():
         sampled_indeces = np.random.choice(indices, min_count, replace=False)
-        balanced_indeces += sampled_indeces
+        balanced_indeces.extend(sampled_indeces)
 
-    new_dataset.train_dataset = Subset(dataset, balanced_indeces)
+    new_dataset: Optional[GenericDataset] = None
+    new_dataset_calss = type(new_dataset_class_name, (GenericDataset,), {})
+    new_dataset = new_dataset_calss()
+
+    new_dataset.train_dataset = Subset(dataset.train_dataset, balanced_indeces)
     new_dataset.train_loader = torch.utils.data.DataLoader(
         new_dataset.train_dataset,
         batch_size=batch_size,
