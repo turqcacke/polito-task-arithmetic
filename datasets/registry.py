@@ -96,7 +96,7 @@ def balance_dataset(
     batch_size: int,
     num_workers: int,
 ) -> GenericDataset:
-    assert dataset.train_dataset
+    assert dataset.train_dataset and dataset.train_loader
 
     dataloader: torch.utils.data.DataLoader = dataset.train_loader
     data_count: Dict[torch.TensorBase, List[int]] = {}
