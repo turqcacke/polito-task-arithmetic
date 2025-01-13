@@ -10,6 +10,7 @@ from heads import get_classification_head
 from tqdm import tqdm
 import os
 
+
 def save_pretrained_encoder(encoder, save_dir):
     """Save the pre-trained encoder before training starts."""
     os.makedirs(save_dir, exist_ok=True)
@@ -51,7 +52,7 @@ def finetune_model(
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = SGD(model.image_encoder.parameters(), lr=lr)
+    optimizer = SGD(model.image_encoder.parameters(), lr=lr, weight_decay=args.wd)
 
     # Fine-tuning loop
     model.train()
@@ -91,7 +92,6 @@ if __name__ == "__main__":
         "SVHN": 4,
     }
     save_directory = "./checkpoints/"
-    balance = args.balance
     for dataset_name, epochs in datasets.items():
         save_path = f"{save_directory}{dataset_name}_finetuned.pt"
         finetune_model(
@@ -101,5 +101,5 @@ if __name__ == "__main__":
             epochs,
             lr=args.lr,
             batch_size=args.batch_size,
-            balance_ds=balance,
+            balance_ds=args.balance,
         )
