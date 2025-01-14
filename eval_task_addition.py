@@ -62,7 +62,7 @@ class MultiTaskAccuracyStats:
             )
             new_stats.append(TaskAccuracyStatsFisher(**stat, fisher=fisher))
         if save:
-            with open(path, "+r", encoding=encoding) as f:
+            with open(path, "w", encoding=encoding) as f:
                 json.dump(new_stats, f, indent="\t")
         return new_stats
 
