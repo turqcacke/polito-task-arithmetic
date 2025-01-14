@@ -94,7 +94,7 @@ class AccuracyStats:
             val_loader = get_dataloader(
                 get_loader_dataset(f"{dataset}Val"),
                 args=self._program_args,
-                is_train=False,
+                is_train=True,
             )
             test_loader = get_dataloader(
                 get_loader_dataset(dataset),
