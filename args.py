@@ -9,6 +9,7 @@ from typing import Optional, List, Literal, Protocol
 class ArgsProto(Protocol):
     data_location: str
     balance: bool
+    fisher: bool
     st_model: Optional[consts.SINGLE_TASK_MODEL_TYPES]
     st_alpha: Optional[float]
     eval_datasets: Optional[List[str]]
@@ -55,6 +56,12 @@ def parse_arguments() -> ArgsProto:
         type=float,
         default=None,
         help="Alpha scaling (only for `prerained` and `finetuned` models)",
+    )
+    parser.add_argument(
+        "--fisher",
+        type=bool,
+        default=False,
+        help="Flag whether calculate fiher for multitask report or not",
     )
     parser.add_argument(
         "--data-location",

@@ -91,7 +91,7 @@ class AccuracyStats:
                 location=self._program_args.data_location,
             )
 
-            val_loader = get_dataloader(
+            train_loader = get_dataloader(
                 get_loader_dataset(f"{dataset}Val"),
                 args=self._program_args,
                 is_train=True,
@@ -123,7 +123,7 @@ class AccuracyStats:
                 dataset=dataset,
                 train=get_stat(
                     model,
-                    val_loader,
+                    train_loader,
                     norm_divisor=normalized_idvisors.get(dataset),
                     loader_args=get_loader_stats(f"(train)[{model_type}]"),
                 ),
