@@ -178,17 +178,17 @@ def parse_arguments() -> ArgsProto:
         help="Number of evaluation points used to find optimal coefficient in task arithmetic.",
     )
     parser.add_argument(
-    "--stop-criterion",
-    type=str,
-    default="none",
-    choices=["none", "fim", "valacc"],
-    help=(
-        "Which stopping criterion to use: "
-        "'none' => use the final epoch, "
-        "'fim' => max FIM log-trace, "
-        "'valacc' => max validation accuracy."
-    ),
-)
+        "--stop-criterion",
+        type=str,
+        default="none",
+        choices=["none", "fim", "valacc"],
+        help=(
+            "Which stopping criterion to use: "
+            "'none' => use the final epoch, "
+            "'fim' => max FIM log-trace, "
+            "'valacc' => max validation accuracy."
+        ),
+    )
     parsed_args = parser.parse_args()
     parsed_args.device = "cuda" if torch.cuda.is_available() else "cpu"
 
