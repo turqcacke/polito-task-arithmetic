@@ -7,6 +7,7 @@ from datasets.registry import get_dataset
 from datasets.common import maybe_dictionarize
 from modeling import ImageClassifier, ImageEncoder
 from heads import get_classification_head
+from utils import train_diag_fim_logtr, evaluate_model
 from tqdm import tqdm
 import os
 
@@ -28,7 +29,8 @@ def finetune_model(
     batch_size=32,
     balance_ds=False,
 ):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
+
     # Initialize pre-trained encoder and dataset-specific head
     encoder = ImageEncoder(args)
 
@@ -50,9 +52,23 @@ def finetune_model(
     )
     train_loader = get_dataloader(train_dataset, is_train=True, args=args)
 
+    val_dataset = get_dataset(
+        dataset_name + "Val",
+        preprocess=model.val_preprocess,
+        location=args.data_location,
+        batch_size=batch_size,
+        num_workers=2,
+        balance=False
+    )
+    val_loader = get_dataloader(val_dataset, is_train=False, args=args)
+
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = SGD(model.image_encoder.parameters(), lr=lr, weight_decay=args.wd)
+
+    # Variables to store the best metric value (FIM or val accuracy) and epoch
+    best_metric_value = float('-inf')
+    best_epoch = 0
 
     # Fine-tuning loop
     model.train()
@@ -71,13 +87,42 @@ def finetune_model(
 
             total_loss += loss.item()
 
-        print(
-            f"Epoch [{epoch + 1}/{epochs}], Loss: {total_loss / len(train_loader):.4f}"
-        )
+        avg_loss = total_loss / len(train_loader)
+        print(f"Epoch [{epoch + 1}/{epochs}], Loss: {total_loss / len(train_loader):.4f}")
+        
+        # Depending on args.stop_criterion, we might compute a metric each epoch
+        current_metric = None
 
-    # Save fine-tuned encoder weights
-    model.image_encoder.save(save_path)
-    print(f"Fine-tuned weights saved to {save_path}")
+        if args.stop_criterion == "fim":
+            # Compute the diagonal Fisher log-trace
+            current_metric = train_diag_fim_logtr(args, model, dataset_name, samples_nr=2000)
+            print(f"   FIM log-trace = {current_metric:.4f}")
+
+        elif args.stop_criterion == "valacc":
+            # Compute validation accuracy
+            val_acc, _ = evaluate_model(model, val_loader, device=device)
+            current_metric = val_acc
+            print(f"   Val Accuracy  = {val_acc:.4f}")
+
+        elif args.stop_criterion == "none":
+            # If we're in "none" mode, we do not compute any metric each epoch
+            # We'll just save the final checkpoint after all epochs
+            pass
+
+        # If we computed a metric and it's better than the best so far, save the checkpoint
+        if current_metric is not None and current_metric > best_metric_value:
+            best_metric_value = current_metric
+            best_epoch = epoch + 1
+            model.image_encoder.save(save_path)
+            print(f"    [BEST] epoch={best_epoch} => checkpoint saved to {save_path}")
+
+    # If stop_criterion == 'none', we save only the final-epoch checkpoint
+    if args.stop_criterion == "none":
+        model.image_encoder.save(save_path)
+        best_epoch = epochs
+        print(f"[{dataset_name}] stop_criterion='none': final checkpoint saved to {save_path}")
+
+    print(f"\n[{dataset_name}] Done training. Best epoch={best_epoch}, best_metric={best_metric_value:.4f}")
 
 
 if __name__ == "__main__":
