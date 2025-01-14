@@ -50,7 +50,7 @@ def train_diag_fim_logtr(args, model, dataset_name: str, samples_nr: int = 2000)
         if param.requires_grad:
             fim[name] = torch.zeros_like(param)
 
-    progress_bar = tqdm(total=samples_nr)
+    progress_bar = tqdm(total=samples_nr, mininterval=1)
     seen_nr = 0
 
     while seen_nr < samples_nr:
