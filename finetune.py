@@ -7,16 +7,18 @@ from datasets.registry import get_dataset
 from datasets.common import maybe_dictionarize
 from modeling import ImageClassifier, ImageEncoder
 from heads import get_classification_head
+from utils import train_diag_fim_logtr, evaluate_model
 from tqdm import tqdm
 import os
+import json
+import numpy as np
 
 
 def save_pretrained_encoder(encoder, save_dir):
-    """Save the pre-trained encoder before training starts."""
+    """Save the pre-trained encoder before fine-tuning."""
     os.makedirs(save_dir, exist_ok=True)
     pretrained_path = os.path.join(save_dir, "pretrained_encoder.pt")
     encoder.save(pretrained_path)
-    print(f"Pre-trained encoder saved at: {pretrained_path}")
 
 
 def finetune_model(
@@ -28,31 +30,46 @@ def finetune_model(
     batch_size=32,
     balance_ds=False,
 ):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if epochs <= 0:
+        raise ValueError("The number of epochs must be greater than 0.")
+    
+    device = torch.device(args.device)
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+
     # Initialize pre-trained encoder and dataset-specific head
     encoder = ImageEncoder(args)
-
-    # Save the pre-trained encoder before fine-tuning
     save_pretrained_encoder(encoder, "./checkpoints/")
 
-    head = get_classification_head(args, dataset_name + "Val")
+    head = get_classification_head(args, dataset_name)
     model = ImageClassifier(encoder, head).to(device)
-    model.freeze_head()  # Freeze classification head
+    model.freeze_head()
 
-    # Load dataset
+    # Load training datasets
     train_dataset = get_dataset(
-        dataset_name + "Val",
+        dataset_name + "Train",
         preprocess=model.train_preprocess,
         location=args.data_location,
         batch_size=batch_size,
         num_workers=2,
         balance=balance_ds,
     )
+
     train_loader = get_dataloader(train_dataset, is_train=True, args=args)
+    val_loader = get_dataloader(train_dataset, is_train=False, args=args)
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = SGD(model.image_encoder.parameters(), lr=lr, weight_decay=args.wd)
+
+    best_metric_value = float('-inf')
+    best_epoch = 0
+    metrics = []
+
+    early_stop_patience = args.early_stop_patience
+    patience_counter = 0
+
+    print(f"Starting fine-tuning for {dataset_name}...")
 
     # Fine-tuning loop
     model.train()
@@ -71,17 +88,48 @@ def finetune_model(
 
             total_loss += loss.item()
 
-        print(
-            f"Epoch [{epoch + 1}/{epochs}], Loss: {total_loss / len(train_loader):.4f}"
-        )
+        avg_loss = total_loss / max(1, len(train_loader))
+        print(f"Epoch {epoch + 1}/{epochs}: Loss = {avg_loss:.4f}")
+        
+        # Metric computation
+        current_metric = None
+        if args.stop_criterion == "fim":
+            current_metric = train_diag_fim_logtr(args, model, dataset_name, samples_nr=args.n_eval_points or 2000)
+            print(f"   FIM log-trace = {current_metric:.4f}")
+        elif args.stop_criterion == "valacc":
+            val_acc, _ = evaluate_model(model, val_loader, device=device)
+            current_metric = val_acc
+            print(f"   Validation Accuracy: {val_acc:.4f}")
 
-    # Save fine-tuned encoder weights
-    model.image_encoder.save(save_path)
-    print(f"Fine-tuned weights saved to {save_path}")
+        # Check for improvements and save checkpoint
+        if current_metric is not None and current_metric > best_metric_value:
+            best_metric_value = current_metric
+            best_epoch = epoch + 1
+            model.image_encoder.save(f"{save_path}_best.pt")
+            print(f"   [Best Checkpoint Saved]: {save_path}_best.pt")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= early_stop_patience:
+                print(f"Early stopping at epoch {epoch + 1}. No improvement in {early_stop_patience} epochs.")
+                break
+
+        metrics.append({"epoch": epoch + 1, "loss": avg_loss, "metric": current_metric if current_metric is not None else "NA"})
+
+    if args.stop_criterion == "none":
+        # Save final checkpoint
+        final_checkpoint_path = f"{save_path}_final.pt"
+        model.image_encoder.save(final_checkpoint_path)
+        print(f"Final checkpoint saved at {final_checkpoint_path}.")
+
+    # Save training metrics
+    with open(f"{save_path}_metrics.json", "w") as f:
+        json.dump(metrics, f)
+
+    print(f"Training completed for {dataset_name}. Best epoch: {best_epoch}, Best metric: {best_metric_value:.4f}")
 
 
 if __name__ == "__main__":
-    # Parse arguments and initialize device
     args = parse_arguments()
     datasets = {
         "DTD": 76,
@@ -93,7 +141,7 @@ if __name__ == "__main__":
     }
     save_directory = "./checkpoints/"
     for dataset_name, epochs in datasets.items():
-        save_path = f"{save_directory}{dataset_name}_finetuned.pt"
+        save_path = f"{save_directory}{dataset_name}_finetuned"
         finetune_model(
             dataset_name,
             args,
