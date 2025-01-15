@@ -47,7 +47,7 @@ def finetune_model(
 
     # Load training datasets
     train_dataset = get_dataset(
-        dataset_name + "Train",
+        dataset_name + "Val",
         preprocess=model.train_preprocess,
         location=args.data_location,
         batch_size=batch_size,
