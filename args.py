@@ -20,7 +20,10 @@ class ArgsProto(Protocol):
     cache_dir: Optional[str]
     openclip_cachedir: str
     device: str
+    n_eval_points: int
+    seed: Optional[int]
     stop_criterion: Literal["none", "fim", "valacc"]
+    early_stop_patience: int
 
 
 def parse_arguments() -> ArgsProto:
@@ -88,6 +91,18 @@ def parse_arguments() -> ArgsProto:
         help="Directory for caching models from OpenCLIP",
     )
     parser.add_argument(
+        "--n-eval-points",
+        type=int,
+        default=21,
+        help="Number of evaluation points used to find optimal coefficient in task arithmetic.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed.",
+    )
+    parser.add_argument(
         "--stop-criterion",
         type=str,
         default="none",
@@ -98,6 +113,12 @@ def parse_arguments() -> ArgsProto:
             "'fim' => max FIM log-trace, "
             "'valacc' => max validation accuracy."
         ),
+    )
+    parser.add_argument(
+        "--early-stop-patience",
+        type=int,
+        default=5,
+        help="Number of epochs to wait for improvement before stopping early.",
     )
     parsed_args = parser.parse_args()
     parsed_args.device = "cuda" if torch.cuda.is_available() else "cpu"
