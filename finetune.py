@@ -50,17 +50,9 @@ def finetune_model(
         num_workers=2,
         balance=balance_ds,
     )
-    train_loader = get_dataloader(train_dataset, is_train=True, args=args)
 
-    val_dataset = get_dataset(
-        dataset_name + "Val",
-        preprocess=model.val_preprocess,
-        location=args.data_location,
-        batch_size=batch_size,
-        num_workers=2,
-        balance=False
-    )
-    val_loader = get_dataloader(val_dataset, is_train=False, args=args)
+    train_loader = get_dataloader(train_dataset, is_train=True, args=args)
+    val_loader = get_dataloader(train_dataset, is_train=False, args=args)
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
