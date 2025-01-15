@@ -15,6 +15,7 @@ class ArgsProto(Protocol):
     batch_size: int
     lr: float
     wd: float
+    load: Optional[List[str]]
     save: Optional[str]
     cache_dir: Optional[str]
     openclip_cachedir: str
@@ -62,6 +63,12 @@ def parse_arguments() -> ArgsProto:
     )
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate.")
     parser.add_argument("--wd", type=float, default=0.0, help="Weight decay")
+    parser.add_argument(
+        "--load",
+        type=lambda x: x.split(","),
+        default=None,
+        help="Optionally load _classifiers_, e.g. a zero shot classifier or probe or ensemble both.",  # noqa: E501
+    )
     parser.add_argument(
         "--save",
         type=str,
