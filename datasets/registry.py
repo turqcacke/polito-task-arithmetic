@@ -95,6 +95,7 @@ def balance_dataset(
     new_dataset_class_name: str,
     batch_size: int,
     num_workers: int,
+    seed: int = 0,
 ) -> GenericDataset:
     assert dataset.train_dataset and dataset.train_loader
 
@@ -106,10 +107,12 @@ def balance_dataset(
     )
     data_count: Dict[torch.TensorBase, List[int]] = {}
     balanced_indeces = []
-    n = 0
+    random_f_with_seed = np.random.default_rng(seed)
 
-    for batch in tqdm(
-        dataloader,
+    for n, batch in tqdm(
+        enumerate(dataloader),
+        total=(len(dataset.train_dataset) // dataloader.batch_size)
+        + (1 if len(dataset.train_dataset) % batch_size > 0 else 0),
         desc=f"Balancing[{new_dataset_class_name.replace('Balanced', '')}]",
     ):
         _, labels = batch
@@ -117,14 +120,13 @@ def balance_dataset(
         for index, label in enumerate(labels):
             data_count[label.item()] = data_count.get(label.item(), list())
             data_count[label.item()].append(offset + index)
-        n += 1
 
     min_count = reduce(
         lambda acc, v: min(acc, len(v)), data_count.values(), sys.maxsize
     )
 
     for indices in data_count.values():
-        sampled_indeces = np.random.choice(indices, min_count, replace=False)
+        sampled_indeces = random_f_with_seed.choice(indices, min_count, replace=False)
         balanced_indeces.extend(sampled_indeces)
 
     new_dataset: Optional[GenericDataset] = None
