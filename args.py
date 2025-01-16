@@ -23,7 +23,6 @@ class ArgsProto(Protocol):
     n_eval_points: int
     seed: Optional[int]
     stop_criterion: Literal["none", "fim", "valacc"]
-    early_stop_patience: int
 
 
 def parse_arguments() -> ArgsProto:
@@ -113,12 +112,6 @@ def parse_arguments() -> ArgsProto:
             "'fim' => max FIM log-trace, "
             "'valacc' => max validation accuracy."
         ),
-    )
-    parser.add_argument(
-        "--early-stop-patience",
-        type=int,
-        default=5,
-        help="Number of epochs to wait for improvement before stopping early.",
     )
     parsed_args = parser.parse_args()
     parsed_args.device = "cuda" if torch.cuda.is_available() else "cpu"

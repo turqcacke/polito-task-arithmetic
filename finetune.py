@@ -47,7 +47,7 @@ def finetune_model(
 
     # Load training datasets
     train_dataset = get_dataset(
-        dataset_name + "Train",
+        dataset_name + "Val",
         preprocess=model.train_preprocess,
         location=args.data_location,
         batch_size=batch_size,
@@ -65,9 +65,6 @@ def finetune_model(
     best_metric_value = float('-inf')
     best_epoch = 0
     metrics = []
-
-    early_stop_patience = args.early_stop_patience
-    patience_counter = 0
 
     print(f"Starting fine-tuning for {dataset_name}...")
 
@@ -107,12 +104,6 @@ def finetune_model(
             best_epoch = epoch + 1
             model.image_encoder.save(f"{save_path}_best.pt")
             print(f"   [Best Checkpoint Saved]: {save_path}_best.pt")
-            patience_counter = 0
-        else:
-            patience_counter += 1
-            if patience_counter >= early_stop_patience:
-                print(f"Early stopping at epoch {epoch + 1}. No improvement in {early_stop_patience} epochs.")
-                break
 
         metrics.append({"epoch": epoch + 1, "loss": avg_loss, "metric": current_metric if current_metric is not None else "NA"})
 
