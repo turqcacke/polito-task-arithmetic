@@ -33,7 +33,7 @@ def finetune_model(
 ):
     if epochs <= 0:
         raise ValueError("The number of epochs must be greater than 0.")
-    
+
     device = torch.device(args.device)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -63,7 +63,7 @@ def finetune_model(
     criterion = nn.CrossEntropyLoss()
     optimizer = SGD(model.image_encoder.parameters(), lr=lr, weight_decay=args.wd)
 
-    best_metric_value = float('-inf')
+    best_metric_value = float("-inf")
     best_epoch = 0
     metrics = []
 
@@ -88,11 +88,13 @@ def finetune_model(
 
         avg_loss = total_loss / max(1, len(train_loader))
         print(f"Epoch {epoch + 1}/{epochs}: Loss = {avg_loss:.4f}")
-        
+
         # Metric computation
         current_metric = None
         if args.stop_criterion == "fim":
-            current_metric = train_diag_fim_logtr(args, model, dataset_name, samples_nr=args.n_eval_points or 2000)
+            current_metric = train_diag_fim_logtr(
+                args, model, dataset_name, samples_nr=args.n_eval_points or 2000
+            )
             print(f"   FIM log-trace = {current_metric:.4f}")
         elif args.stop_criterion == "valacc":
             val_acc, _ = evaluate_model(model, val_loader, device=device)
@@ -103,40 +105,48 @@ def finetune_model(
         if current_metric is not None and current_metric > best_metric_value:
             best_metric_value = current_metric
             best_epoch = epoch + 1
-            model.image_encoder.save(f"{save_path}.pt")
-            print(f"   [Best Checkpoint Saved]: {save_path}.pt")
+            model.image_encoder.save(save_path)
+            print(f"   [Best Checkpoint Saved]: {save_path}")
 
-        metrics.append({"epoch": epoch + 1, "loss": avg_loss, "metric": current_metric if current_metric is not None else "NA"})
+        metrics.append(
+            {
+                "epoch": epoch + 1,
+                "loss": avg_loss,
+                "metric": current_metric if current_metric is not None else "NA",
+            }
+        )
 
     if args.stop_criterion == "none":
         # Save final checkpoint
-        final_checkpoint_path = f"{save_path}.pt"
+        final_checkpoint_path = save_path
         model.image_encoder.save(final_checkpoint_path)
         print(f"Final checkpoint saved at {final_checkpoint_path}.")
 
     # Save training metrics
-    with open(str(BASE_DIR / EVAL_FOLDER / dataset_name+ '_metrics.json'), "w") as f:
+    with open(str(BASE_DIR / EVAL_FOLDER / (dataset_name + "_metrics.json")), "w") as f:
         json.dump(metrics, f, indent=4)
 
-    print(f"Training completed for {dataset_name}. Best epoch: {best_epoch}, Best metric: {best_metric_value:.4f}")
+    print(
+        f"Training completed for {dataset_name}. Best epoch: {best_epoch}, Best metric: {best_metric_value:.4f}"
+    )
 
 
 if __name__ == "__main__":
     args = parse_arguments()
     datasets = {
-        "DTD": 76,
-        "EuroSAT": 12,
-        "GTSRB": 11,
-        "MNIST": 5,
-        "RESISC45": 15,
+        # "DTD": 76,
+        # "EuroSAT": 12,
+        # "GTSRB": 11,
+        # "MNIST": 5,
+        # "RESISC45": 15,
         "SVHN": 4,
     }
     for dataset_name, epochs in datasets.items():
-        save_path = f"{CHECKPOINTS_FOLDER}{dataset_name}_finetuned"
+        save_path = CHECKPOINTS_FOLDER / f"{dataset_name}_finetuned.pt"
         finetune_model(
             dataset_name,
             args,
-            save_path,
+            str(save_path),
             epochs,
             lr=args.lr,
             batch_size=args.batch_size,
