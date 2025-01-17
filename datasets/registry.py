@@ -8,7 +8,12 @@ import copy
 import numpy as np
 
 from typing import Any, Dict, List, Optional
-from torch.utils.data import Subset
+from torch.utils.data import (
+    Subset,
+    SequentialSampler,
+    BatchSampler,
+    WeightedRandomSampler,
+)
 from torch.utils.data.dataset import random_split
 from tqdm import tqdm
 
@@ -98,46 +103,43 @@ def balance_dataset(
     seed: int = 0,
 ) -> GenericDataset:
     assert dataset.train_dataset and dataset.train_loader
-
     dataloader: torch.utils.data.DataLoader = torch.utils.data.DataLoader(
         dataset.train_dataset,
         dataset.train_loader.batch_size,
-        False,
+        shuffle=False,
         num_workers=dataset.train_loader.num_workers,
     )
-    data_count: Dict[torch.TensorBase, List[int]] = {}
-    balanced_indeces = []
-    random_f_with_seed = np.random.default_rng(seed)
+    data_count: Dict[torch.TensorBase, int] = {}
+    labels_seq = []
 
-    for n, batch in tqdm(
-        enumerate(dataloader),
-        total=(len(dataset.train_dataset) // dataloader.batch_size)
-        + (1 if len(dataset.train_dataset) % batch_size > 0 else 0),
+    for batch in tqdm(
+        dataloader,
         desc=f"Balancing[{new_dataset_class_name.replace('Balanced', '')}]",
     ):
         _, labels = batch
-        offset = n * dataloader.batch_size
-        for index, label in enumerate(labels):
-            data_count[label.item()] = data_count.get(label.item(), list())
-            data_count[label.item()].append(offset + index)
+        for label in labels:
+            data_count[label.item()] = data_count.get(label.item(), 0) + 1
+            labels_seq.append(label.item())
 
-    min_count = reduce(
-        lambda acc, v: min(acc, len(v)), data_count.values(), sys.maxsize
-    )
-
-    for indices in data_count.values():
-        sampled_indeces = random_f_with_seed.choice(indices, min_count, replace=False)
-        balanced_indeces.extend(sampled_indeces)
+    min_count = reduce(lambda acc, v: min(acc, v), data_count.values(), sys.maxsize)
+    weights = map(lambda label: 1 / data_count[label], labels_seq)
 
     new_dataset: Optional[GenericDataset] = None
     new_dataset_calss = type(new_dataset_class_name, (GenericDataset,), {})
     new_dataset = new_dataset_calss()
 
-    new_dataset.train_dataset = Subset(dataset.train_dataset, balanced_indeces)
+    weighted_sampler = WeightedRandomSampler(
+        weights=list(weights),
+        num_samples=min_count * len(data_count),
+        replacement=False,
+        generator=torch.Generator().manual_seed(seed),
+    )
+    new_dataset.train_dataset = dataset.train_dataset
     new_dataset.train_loader = torch.utils.data.DataLoader(
         new_dataset.train_dataset,
         batch_size=batch_size,
         num_workers=num_workers,
+        sampler=weighted_sampler,
     )
     new_dataset.test_dataset = dataset.test_dataset
     new_dataset.test_loader = dataset.test_loader
