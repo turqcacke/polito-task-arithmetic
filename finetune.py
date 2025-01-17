@@ -134,11 +134,11 @@ def finetune_model(
 if __name__ == "__main__":
     args = parse_arguments()
     datasets = {
-        # "DTD": 76,
-        # "EuroSAT": 12,
-        # "GTSRB": 11,
-        # "MNIST": 5,
-        # "RESISC45": 15,
+        "DTD": 76,
+        "EuroSAT": 12,
+        "GTSRB": 11,
+        "MNIST": 5,
+        "RESISC45": 15,
         "SVHN": 4,
     }
     for dataset_name, epochs in datasets.items():
