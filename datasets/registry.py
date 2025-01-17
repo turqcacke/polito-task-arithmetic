@@ -123,9 +123,7 @@ def balance_dataset(
             data_count[label.item()] = data_count.get(label.item(), 0) + 1
             labels_seq.append(label.item())
 
-    min_count = reduce(
-        lambda acc, v: min(acc, len(v)), data_count.values(), sys.maxsize
-    )
+    min_count = reduce(lambda acc, v: min(acc, v), data_count.values(), sys.maxsize)
     weights = map(lambda label: 1 / data_count[label], labels_seq)
 
     new_dataset: Optional[GenericDataset] = None
@@ -133,7 +131,7 @@ def balance_dataset(
     new_dataset = new_dataset_calss()
 
     weighted_sampler = WeightedRandomSampler(
-        weights=weights,
+        weights=list(weights),
         num_samples=min_count * len(data_count),
         replacement=False,
         generator=torch.Generator().manual_seed(seed),
