@@ -114,8 +114,6 @@ def balance_dataset(
 
     for batch in tqdm(
         dataloader,
-        total=(len(dataset.train_dataset) // dataloader.batch_size)
-        + (1 if len(dataset.train_dataset) % batch_size > 0 else 0),
         desc=f"Balancing[{new_dataset_class_name.replace('Balanced', '')}]",
     ):
         _, labels = batch
