@@ -1,5 +1,7 @@
-from consts import CHECKPOINTS_FOLDER, BASE_DIR, EVAL_FOLDER
+import os
+import json
 import torch
+import numpy as np
 import torch.nn as nn
 from torch.optim import SGD
 from args import parse_arguments, ArgsProto
@@ -9,10 +11,8 @@ from datasets.common import maybe_dictionarize
 from modeling import ImageClassifier, ImageEncoder
 from heads import get_classification_head
 from utils import train_diag_fim_logtr, evaluate_model
+from consts import CHECKPOINTS_FOLDER, BASE_DIR, EVAL_FOLDER
 from tqdm import tqdm
-import os
-import json
-import numpy as np
 
 
 def save_pretrained_encoder(encoder, save_dir):
