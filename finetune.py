@@ -1,3 +1,4 @@
+from consts import CHECKPOINTS_FOLDER, BASE_DIR, EVAL_FOLDER
 import torch
 import torch.nn as nn
 from torch.optim import SGD
@@ -102,20 +103,20 @@ def finetune_model(
         if current_metric is not None and current_metric > best_metric_value:
             best_metric_value = current_metric
             best_epoch = epoch + 1
-            model.image_encoder.save(f"{save_path}_best.pt")
-            print(f"   [Best Checkpoint Saved]: {save_path}_best.pt")
+            model.image_encoder.save(f"{save_path}.pt")
+            print(f"   [Best Checkpoint Saved]: {save_path}.pt")
 
         metrics.append({"epoch": epoch + 1, "loss": avg_loss, "metric": current_metric if current_metric is not None else "NA"})
 
     if args.stop_criterion == "none":
         # Save final checkpoint
-        final_checkpoint_path = f"{save_path}_final.pt"
+        final_checkpoint_path = f"{save_path}.pt"
         model.image_encoder.save(final_checkpoint_path)
         print(f"Final checkpoint saved at {final_checkpoint_path}.")
 
     # Save training metrics
-    with open(f"{save_path}_metrics.json", "w") as f:
-        json.dump(metrics, f)
+    with open(str(BASE_DIR / EVAL_FOLDER / dataset_name+ '_metrics.json'), "w") as f:
+        json.dump(metrics, f, indent=4)
 
     print(f"Training completed for {dataset_name}. Best epoch: {best_epoch}, Best metric: {best_metric_value:.4f}")
 
@@ -130,9 +131,8 @@ if __name__ == "__main__":
         "RESISC45": 15,
         "SVHN": 4,
     }
-    save_directory = "./checkpoints/"
     for dataset_name, epochs in datasets.items():
-        save_path = f"{save_directory}{dataset_name}_finetuned"
+        save_path = f"{CHECKPOINTS_FOLDER}{dataset_name}_finetuned"
         finetune_model(
             dataset_name,
             args,
