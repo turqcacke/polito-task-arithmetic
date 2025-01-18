@@ -123,6 +123,7 @@ def finetune_model(
         print(f"Final checkpoint saved at {final_checkpoint_path}.")
 
     # Save training metrics
+    os.makedirs(str(BASE_DIR / EVAL_FOLDER), exist_ok=True)
     with open(str(BASE_DIR / EVAL_FOLDER / (dataset_name + "_metrics.json")), "w") as f:
         json.dump(metrics, f, indent=4)
 
