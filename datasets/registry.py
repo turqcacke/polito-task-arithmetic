@@ -1,19 +1,11 @@
-from collections import Counter
 from functools import reduce
 import sys
 import inspect
-import random
 import torch
 import copy
 import numpy as np
-
-from typing import Any, Dict, List, Optional
-from torch.utils.data import (
-    Subset,
-    SequentialSampler,
-    BatchSampler,
-    WeightedRandomSampler,
-)
+from typing import Any, Dict, Iterator, List, Optional, Sized
+from torch.utils.data import Sampler
 from torch.utils.data.dataset import random_split
 from tqdm import tqdm
 
@@ -43,6 +35,44 @@ class GenericDataset(object):
         self.test_dataset = None
         self.test_loader = None
         self.classnames = None
+
+
+class BalancedSampler(Sampler[int]):
+    data_source: Sized
+
+    def __init__(
+        self,
+        data_source: Sized = None,
+        index_counts: Dict[Any, int] = list(),
+        seed: int = None,
+    ):
+        if len(data_source) < len(index_counts) or len(data_source) < max(index_counts):
+            raise ValueError("Indices and data source is inconsistent.")
+
+        if not seed:
+            seed = seed or int(torch.empty((), dtype=torch.int64).random_().item())
+            self.generator = torch.Generator()
+            self.generator.manual_seed(seed)
+            self._np_generator = np.random.default_rng(seed=seed)
+
+        self.data_source = data_source
+        self.index_count = index_counts
+        self._min_indices_per_class = reduce(
+            lambda acc, val: min(len(val), acc), index_counts.values(), float("inf")
+        )
+        self._len_indices = self._min_indices_per_class * len(index_counts)
+
+    def __iter__(self) -> Iterator[int]:
+        balanced_indices = []
+        for indices in self.index_count.values():
+            balanced_indices.extend(
+                self._np_generator.choice(indices, self._min_indices_per_class)
+            )
+        self._np_generator.shuffle(balanced_indices)
+        return iter(balanced_indices)
+
+    def __len__(self) -> int:
+        return self._len_indices
 
 
 def split_train_into_train_val(
@@ -109,37 +139,29 @@ def balance_dataset(
         shuffle=False,
         num_workers=dataset.train_loader.num_workers,
     )
-    data_count: Dict[torch.TensorBase, int] = {}
-    labels_seq = []
+    data_count: Dict[torch.TensorBase, List] = {}
 
-    for batch in tqdm(
-        dataloader,
+    for idx, batch in tqdm(
+        enumerate(dataloader),
+        total=(len(dataset.train_dataset) // dataloader.batch_size)
+        + (1 if len(dataset.train_dataset) % batch_size > 0 else 0),
         desc=f"Balancing[{new_dataset_class_name.replace('Balanced', '')}]",
     ):
         _, labels = batch
-        for label in labels:
-            data_count[label.item()] = data_count.get(label.item(), 0) + 1
-            labels_seq.append(label.item())
+        offset = idx * dataloader.batch_size
+        for label_idx, label in enumerate(labels):
+            data_count[label.item()] = data_count.get(label.item(), list())
+            data_count[label.item()].append(offset + label_idx)
 
-    min_count = reduce(lambda acc, v: min(acc, v), data_count.values(), sys.maxsize)
-    weights = map(lambda label: 1 / data_count[label], labels_seq)
-
-    new_dataset: Optional[GenericDataset] = None
     new_dataset_calss = type(new_dataset_class_name, (GenericDataset,), {})
-    new_dataset = new_dataset_calss()
+    new_dataset: GenericDataset = new_dataset_calss()
 
-    weighted_sampler = WeightedRandomSampler(
-        weights=list(weights),
-        num_samples=min_count * len(data_count),
-        replacement=False,
-        generator=torch.Generator().manual_seed(seed),
-    )
     new_dataset.train_dataset = dataset.train_dataset
     new_dataset.train_loader = torch.utils.data.DataLoader(
         new_dataset.train_dataset,
         batch_size=batch_size,
         num_workers=num_workers,
-        sampler=weighted_sampler,
+        sampler=BalancedSampler(new_dataset.train_dataset, data_count, seed),
     )
     new_dataset.test_dataset = dataset.test_dataset
     new_dataset.test_loader = dataset.test_loader
