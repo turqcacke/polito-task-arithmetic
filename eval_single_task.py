@@ -9,21 +9,8 @@ from datasets.common import get_dataloader
 from heads import get_classification_head
 from mergeged_model import MergedModelBuilder
 from modeling import ImageClassifier, ImageEncoder
-from typing import Dict, List, Optional, Tuple, TypedDict, Literal
+from typing import Dict, List, Literal, Union
 from pathlib import Path
-
-
-class Stat(TypedDict):
-    absolute: Optional[float]
-    normalized: Optional[float]
-
-
-class TaskAccuracyStat(TypedDict):
-    """Wrapper for accuracy stats, can be used as `type`"""
-
-    dataset: str
-    train: Stat
-    test: Stat
 
 
 class AccuracyStats:
@@ -63,20 +50,19 @@ class AccuracyStats:
         path: str,
         model_type: consts.SINGLE_TASK_MODEL_TYPES,
         normalized_idvisors: Dict[str, float] = {},
-        save=False,
+        fisher: bool = False,
         encoding: str = "utf-8",
-    ) -> List[TaskAccuracyStat]:
+    ) -> List[Union[utils.TaskAccuracyStat, utils.TaskAccuracyStatsFisher]]:
         """Generation method, used to generate `json`s
         and start evaluation
 
-        :param path: Path where to save `json` report
+        :param path: Path where to save `json` report, if `None` do
+            do not save
         :type path: str
         :param model_type: Specifies which model checkpoint to use
         :type model_type: consts.SINGLE_TASK_MODEL_TYPES
-        :param normalized_idvisors: Divisers for normalized accuracy, defaults to {}
+        :param normalized_idvisors: Divisors for normalized accuracy, defaults to {}
         :type normalized_idvisors: Dict[str, float], optional
-        :param save: Whether to save to a file or not, defaults to False
-        :type save: bool, optional
         :param encoding: `json` file encoding, defaults to "utf-8"
         :type encoding: str, optional
         :return: List of task based reports
@@ -107,19 +93,19 @@ class AccuracyStats:
                 index + 1,
                 len(self._model_builder.checkpoints),
             )
-            get_stat = lambda *args, **kwargs: Stat(
+            get_stat = lambda *args, **kwargs: utils.Stat(
                 **{
                     t[0]: t[1]
                     for t in zip(
                         ("absolute", "normalized"),
-                        self._evaluate_model(
+                        utils.evaluate_model(
                             *args,
                             **kwargs,
                         ),
                     )
                 }
             )
-            task_accuracy_stat = TaskAccuracyStat(
+            task_accuracy_stat = utils.TaskAccuracyStat(
                 dataset=dataset,
                 train=get_stat(
                     model,
@@ -136,14 +122,15 @@ class AccuracyStats:
             )
             stats.append(task_accuracy_stat)
 
-        if save:
+        if fisher:
+            model_builder = lambda dataset: self._get_model(dataset, model_type)
+            stats = utils.claculate_fisher(model_builder, self._program_args, stats)
+
+        if path:
             with open(path, "w", encoding=encoding) as f:
                 json.dump(stats, f, indent="\t")
 
         return stats
-
-    def _evaluate_model(self, *args, **kwargs) -> Tuple[float, float]:
-        return utils.evaluate_model(*args, **kwargs)
 
 
 if __name__ == "__main__":
@@ -165,7 +152,7 @@ if __name__ == "__main__":
         args, str(checkpoints_dir / consts.PRETRAINED_MODEL_NAME), str(checkpoints_dir)
     )
 
-    stats = stats.generate(str(save_dir), args.st_model, save=True)
+    stats = stats.generate(str(save_dir), args.st_model, fisher=args.fisher)
 
     print("\nGenerated report for following datasets:")
     print(f"\t{str([stat['dataset'] for stat in stats])}")

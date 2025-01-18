@@ -50,7 +50,7 @@ def parse_arguments() -> ArgsProto:
         "--fisher",
         type=bool,
         default=True,
-        help="Flag whether calculate fiher for multitask report or not",
+        help="Flag whether calculate fiher for report or not",
     )
     parser.add_argument(
         "--data-location",

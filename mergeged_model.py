@@ -25,7 +25,7 @@ class MergedModelBuilder:
     ) -> Dict[str, NonLinearTaskVector]:
         tasks = {}
         for dataset, checkpoint in tqdm(
-            self.checkpoints.items(), desc="Load task vector"
+            self.checkpoints.items(), desc="Loading task vector"
         ):
             if not filter_(dataset):
                 continue

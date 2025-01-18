@@ -7,15 +7,11 @@ import utils
 from args import ArgsProto, parse_arguments
 from datasets.registry import get_dataset
 from datasets.common import get_dataloader
-from eval_single_task import TaskAccuracyStat, AccuracyStats
+from eval_single_task import AccuracyStats
 from heads import get_classification_head
 from mergeged_model import MergedModelBuilder
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from tqdm import tqdm
-
-
-class TaskAccuracyStatsFisher(TaskAccuracyStat):
-    fisher: Optional[float]
 
 
 class MultiTaskAccuracyStats:
@@ -43,28 +39,8 @@ class MultiTaskAccuracyStats:
                 "Json report for finetuned accuracies does not exist's."
             )
         with open(str(json_path), "r") as f:
-            accuracies_json: List[TaskAccuracyStat] = json.load(f)
+            accuracies_json: List[utils.TaskAccuracyStat] = json.load(f)
         return {acc["dataset"]: acc["train"]["absolute"] for acc in accuracies_json}
-
-    def _claculate_fisher(
-        self,
-        path: str,
-        stats: List[TaskAccuracyStat],
-        save: bool = False,
-        encoding: str = "utf-8",
-    ) -> List[TaskAccuracyStatsFisher]:
-        new_stats = []
-        for stat in tqdm(stats, desc="Calculating fisher"):
-            head = get_classification_head(self._program_args, stat["dataset"])
-            model = self._model_builder.build(head, self._pretrined, self._best_alpha)
-            fisher = utils.train_diag_fim_logtr(
-                self._program_args, model, stat["dataset"]
-            )
-            new_stats.append(TaskAccuracyStatsFisher(**stat, fisher=fisher))
-        if save:
-            with open(path, "w", encoding=encoding) as f:
-                json.dump(new_stats, f, indent="\t")
-        return new_stats
 
     def get_save_path(self, filename: str) -> str:
         os.makedirs(str(self._SAVE_DIR), exist_ok=True)
@@ -125,20 +101,18 @@ class MultiTaskAccuracyStats:
         self._best_alpha = alpha
         return best_alpha
 
-    def generate(self, path: str, fisher: bool = False) -> List[TaskAccuracyStat]:
+    def generate(
+        self, path: str, fisher: bool = False
+    ) -> List[Union[utils.TaskAccuracyStat, utils.TaskAccuracyStatsFisher]]:
         alpha = self._best_alpha or self.find_best_alpha()
         stat_gen = AccuracyStats(
             self._program_args, self._pretrined, self._program_args.save
         )
         self._program_args.st_alpha = alpha
         stats_result = stat_gen.generate(
-            path, "merged", self._single_task_accuracies, not fisher
+            path, "merged", self._single_task_accuracies, fisher
         )
-        return (
-            self._claculate_fisher(path, stats_result, fisher)
-            if fisher
-            else stats_result
-        )
+        return stats_result
 
 
 if __name__ == "__main__":

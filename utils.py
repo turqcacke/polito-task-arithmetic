@@ -1,8 +1,9 @@
 from email.headerregistry import DateHeader
 import os
-from typing import Any, Tuple, Callable
+from typing import Any, List, Optional, Tuple, Callable, TypedDict
 import torch
 from tqdm.auto import tqdm
+from args import ArgsProto
 from datasets.common import maybe_dictionarize
 from datasets.registry import get_dataset
 
@@ -28,6 +29,23 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
+class Stat(TypedDict):
+    absolute: Optional[float]
+    normalized: Optional[float]
+
+
+class TaskAccuracyStat(TypedDict):
+    """Wrapper for accuracy stats, can be used as `type`"""
+
+    dataset: str
+    train: Stat
+    test: Stat
+
+
+class TaskAccuracyStatsFisher(TaskAccuracyStat):
+    fisher: Optional[float]
+
+
 def train_diag_fim_logtr(args, model, dataset_name: str, samples_nr: int = 2000):
 
     model.cuda()
@@ -50,7 +68,7 @@ def train_diag_fim_logtr(args, model, dataset_name: str, samples_nr: int = 2000)
         if param.requires_grad:
             fim[name] = torch.zeros_like(param)
 
-    progress_bar = tqdm(total=samples_nr, mininterval=1)
+    progress_bar = tqdm(total=samples_nr, mininterval=1, desc=f"Fisher[{dataset_name}]")
     seen_nr = 0
 
     while seen_nr < samples_nr:
@@ -126,3 +144,16 @@ def evaluate_model(
             total += labels.size(0)
     acc = correct / total
     return acc, acc / norm_divisor if norm_divisor else norm_divisor
+
+
+def claculate_fisher(
+    model_builder: Callable[[str], Callable[[Any], torch._C.TensorBase]],
+    args: ArgsProto,
+    stats: List[TaskAccuracyStat],
+) -> List[TaskAccuracyStatsFisher]:
+    new_stats = []
+    for stat in tqdm(stats, desc="Calculating fisher"):
+        model = model_builder(stat["dataset"])
+        fisher = train_diag_fim_logtr(args, model, stat["dataset"])
+        new_stats.append(TaskAccuracyStatsFisher(**stat, fisher=fisher))
+    return new_stats
