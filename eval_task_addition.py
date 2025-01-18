@@ -49,7 +49,7 @@ class MultiTaskAccuracyStats:
     def _claculate_fisher(
         self,
         path: str,
-        stats: List[TaskAccuracyStatsFisher],
+        stats: List[TaskAccuracyStat],
         save: bool = False,
         encoding: str = "utf-8",
     ) -> List[TaskAccuracyStatsFisher]:
