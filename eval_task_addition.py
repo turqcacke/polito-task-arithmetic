@@ -154,7 +154,7 @@ if __name__ == "__main__":
     report_path = stats_gen_multi_task.get_save_path(
         consts.MULTI_TASK_SAVE_FILE.format(suffix=f"{best_alpha:.2f}".replace(".", "_"))
     )
-    report = stats_gen_multi_task.generate(report_path, True)
+    report = stats_gen_multi_task.generate(report_path, args.fisher)
 
     print("\nGenerated report for following datasets:")
     print(f"\t{str([stat['dataset'] for stat in report])}")
