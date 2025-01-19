@@ -49,7 +49,7 @@ class AccuracyStats:
         self,
         path: str,
         model_type: consts.SINGLE_TASK_MODEL_TYPES,
-        normalized_idvisors: Dict[str, float] = {},
+        normalized_idvisors: Dict[str, Dict[str, float]] = {},
         fisher: bool = False,
         encoding: str = "utf-8",
     ) -> List[Union[utils.TaskAccuracyStat, utils.TaskAccuracyStatsFisher]]:
@@ -82,6 +82,11 @@ class AccuracyStats:
                 args=self._program_args,
                 is_train=True,
             )
+            val_loader = get_dataloader(
+                get_loader_dataset(f"{dataset}Val"),
+                args=self._program_args,
+                is_train=False,
+            )
             test_loader = get_dataloader(
                 get_loader_dataset(dataset),
                 args=self._program_args,
@@ -110,14 +115,20 @@ class AccuracyStats:
                 train=get_stat(
                     model,
                     train_loader,
-                    norm_divisor=normalized_idvisors.get(dataset),
+                    norm_divisor=normalized_idvisors.get(dataset, {}).get("train"),
                     loader_args=get_loader_stats(f"(train)[{model_type}]"),
                 ),
                 test=get_stat(
                     model,
                     test_loader,
-                    norm_divisor=normalized_idvisors.get(dataset),
+                    norm_divisor=normalized_idvisors.get(dataset, {}).get("test"),
                     loader_args=get_loader_stats(f"(test)[{model_type}]"),
+                ),
+                validation=get_stat(
+                    model,
+                    val_loader,
+                    norm_divisor=normalized_idvisors.get(dataset, {}).get("validation"),
+                    loader_args=get_loader_stats(f"(validation)[{model_type}]"),
                 ),
             )
             stats.append(task_accuracy_stat)

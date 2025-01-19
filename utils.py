@@ -39,6 +39,7 @@ class TaskAccuracyStat(TypedDict):
 
     dataset: str
     train: Stat
+    validation: Stat
     test: Stat
 
 

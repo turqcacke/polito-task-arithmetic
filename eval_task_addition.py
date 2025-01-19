@@ -28,7 +28,7 @@ class MultiTaskAccuracyStats:
         self._best_alpha: Optional[float] = None
         self._single_task_accuracies = self._load_single_task_accuracies()
 
-    def _load_single_task_accuracies(self) -> Dict[str, float]:
+    def _load_single_task_accuracies(self) -> Dict[str, Dict[str, float]]:
         json_path = (
             consts.BASE_DIR
             / consts.EVAL_FOLDER
@@ -40,7 +40,14 @@ class MultiTaskAccuracyStats:
             )
         with open(str(json_path), "r") as f:
             accuracies_json: List[utils.TaskAccuracyStat] = json.load(f)
-        return {acc["dataset"]: acc["train"]["absolute"] for acc in accuracies_json}
+        return {
+            acc["dataset"]: {
+                "train": acc["train"]["absolute"],
+                "test": acc["test"]["absolute"],
+                "validation": acc["validation"]["absolute"],
+            }
+            for acc in accuracies_json
+        }
 
     def get_save_path(self, filename: str) -> str:
         os.makedirs(str(self._SAVE_DIR), exist_ok=True)
@@ -85,7 +92,7 @@ class MultiTaskAccuracyStats:
                 _, norm_acc = utils.evaluate_model(
                     model,
                     data_loader,
-                    single_task_accuracies[ds],
+                    single_task_accuracies[ds]["validation"],
                     device=self._device,
                     loader_args=loader_args,
                 )
