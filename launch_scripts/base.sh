@@ -6,6 +6,8 @@ BATCH_SIZE=32
 LR=1e-4
 WD=0.0
 BALANCED="false"
+STOP_CRITERION="none"
+
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -33,6 +35,10 @@ while [[ "$#" -gt 0 ]]; do
       BALANCED="$2"
       shift 2
       ;;
+    --stop-criterion)
+      STOP_CRITERION="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown argument: $1"
       exit 1
@@ -43,27 +49,29 @@ done
 # 1) Finetune
 echo "Starting finetuning..."
 python finetune.py \
-  --data-location=$DATA_LOCATION \
-  --save=$SAVE_DIR \
-  --batch-size=$BATCH_SIZE \
-  --lr=$LR \
-  --wd=$WD \
-  --balance=$BALANCED
+    --data-location=$DATA_LOCATION \
+    --save=$SAVE_DIR \
+    --batch-size=$BATCH_SIZE \
+    --lr=$LR \
+    --wd=$WD \
+    --balance=$BALANCED \
+    --stop-criterion=$STOP_CRITERION
+
 
 echo "Finetuning completed!"
 
 # 2) Single Task evaluation
 echo "Starting evaluation (Single Task)..."
 python eval_single_task.py \
-  --data-location=$DATA_LOCATION \
-  --save=$SAVE_DIR
+    --data-location=$DATA_LOCATION \
+    --save=$SAVE_DIR
 
 echo "Evaluation (Single Task) completed!"
 
 # 3) Multi task avaluation
 echo "Starting Task Addition evaluation..."
 python eval_task_addition.py \
-  --data-location=$DATA_LOCATION \
-  --save=$SAVE_DIR
+    --data-location=$DATA_LOCATION \
+    --save=$SAVE_DIR
 
 echo "Task Addition evaluation completed!"
