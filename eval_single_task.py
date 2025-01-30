@@ -63,6 +63,8 @@ class AccuracyStats:
         :type model_type: consts.SINGLE_TASK_MODEL_TYPES
         :param normalized_idvisors: Divisors for normalized accuracy, defaults to {}
         :type normalized_idvisors: Dict[str, float], optional
+        :param fisher: _description_, defaults to False
+        :type fisher: bool, optional
         :param encoding: `json` file encoding, defaults to "utf-8"
         :type encoding: str, optional
         :return: List of task based reports

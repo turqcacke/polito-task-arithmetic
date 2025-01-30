@@ -38,7 +38,7 @@ def parse_arguments() -> ArgsProto:
         "--st-model",
         choices=["pretrained", "finetuned", "merged"],
         default="finetuned",
-        help="Which model is used for generating eval_single_task `json` report",
+        help="Which model is used for generating `eval_single_task.json` report",
     )
     parser.add_argument(
         "--st-alpha",

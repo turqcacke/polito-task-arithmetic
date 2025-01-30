@@ -33,13 +33,35 @@ In the following, you can find a brief description of the included files.
 | `task_vectors.py` | contains the code for building task vectors and/or load checkpoints. |
 | `modeling.py` | contains the backbone architectures and modules used in the project. |
 | `heads.py` | contains the logic to build and store the open-vocabulary classifiers used in the project. |
+| `merged_mode.py` | contains the logic to build model by task vectors. |
+| `finetune.py` | contains the logic finetune pretrained model. |
+| `eval_single_task.py` | contains the metrics evaluation logic. |
+| `eval_task_addition.py` | contains logic for multi task metrics evaluation and finding best alpha. |
+
+
+
+
 
 ## Running The Experiments
+#### Running with VsCode
+To run with VsCode, go to `Run and Debug` section, choose script you want to run. Press `F5`.
+
+#### Running with `bash`
 To run the experiments you can use, copy and modify the provided launch script `launch_scripts/base.sh`, which should give you an idea on how to design the implementation of the missing files.
 As an example, after producing the three missing files, you should be able to launch the experiments as
 ```
 ./launch_scripts/base.sh
 ```
+Supported command args for script:
+| Argument          | Description                              |
+|------------------|------------------------------------------|
+| `--data-location` | Path to the dataset                     |
+| `--save`         | Directory for saving checkpoints        |
+| `--batch-size`   | Batch size for training                 |
+| `--lr`           | Learning rate                           |
+| `--wd`           | Weight decay (regularization factor)    |
+| `--balanced`     | Flag for data balancing                 |
+
 
 *NOTE: you should upload with your code also the launch scripts as they are fundamental to reproduce your results.*
 
@@ -53,7 +75,11 @@ In the following, you can find a brief description of the relevant command line 
 | `--lr` | learning rate used in the optimization procedure (default: `1e-4`) |
 | `--wd` | weight decay of the optimizer (default: `0.0`) |
 | `--data-location` | path to the folder containing your unzipped dataset folders. |
-| `--save` | path to the folder where to save your results. |
+| `--balance` | flag whether balance train dataset or not. |
+| `--st-alpha` | alpha scaling (only for `prerained` and `finetuned` models). |
+| `--st-model` | model to use for generating `eval_single_task.json` report. Posible options: [`pretrained`, `finetuned`, `merged`] |
+| `--fisher` | flag whether calculate fiher for report or not. |
+| `--stop-criterion` | Specifies the stopping criterion: `none` - Uses the final epoch, `fim` - Stops at the maximum FIM log-trace, `valacc` - Stops at the maximum validation accuracy. |
 
 
 ## Bug Reporting
