@@ -33,7 +33,7 @@ In the following, you can find a brief description of the included files.
 | `task_vectors.py` | contains the code for building task vectors and/or load checkpoints. |
 | `modeling.py` | contains the backbone architectures and modules used in the project. |
 | `heads.py` | contains the logic to build and store the open-vocabulary classifiers used in the project. |
-| `merged_mode.py` | contains the logic to build model by task vectors. |
+| `merged_model.py` | contains the logic to build model by task vectors. |
 | `finetune.py` | contains the logic finetune pretrained model. |
 | `eval_single_task.py` | contains the metrics evaluation logic. |
 | `eval_task_addition.py` | contains logic for multi task metrics evaluation and finding best alpha. |
