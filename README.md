@@ -44,7 +44,7 @@ In the following, you can find a brief description of the included files.
 
 ## Running The Experiments
 #### Running with VsCode
-To run with VsCode, go to `Run and Debug` section, choose script you want to run. Press `F5`.
+To run with **VsCode**, go to `Run and Debug` section, choose script you want to run. Press `F5`.
 
 #### Running with `bash`
 To run the experiments you can use, copy and modify the provided launch script `launch_scripts/base.sh`, which should give you an idea on how to design the implementation of the missing files.
@@ -61,6 +61,7 @@ Supported command args for script:
 | `--lr`           | Learning rate                           |
 | `--wd`           | Weight decay (regularization factor)    |
 | `--balanced`     | Flag for data balancing                 |
+| `--stop-criterion` | stopping criterion to use: `none` (default), `fim`, or `valacc`. |
 
 
 *NOTE: you should upload with your code also the launch scripts as they are fundamental to reproduce your results.*
